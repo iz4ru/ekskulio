@@ -3,9 +3,12 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class ExtracurricularSchedule extends Model
 {
+    use HasFactory;
+    
     protected $table = 'extracurricular_schedules';
 
     protected $fillable = [
@@ -15,6 +18,6 @@ class ExtracurricularSchedule extends Model
 
     public function extracurricular()
     {
-        return $this->belongsTo(Extracurricular::class);
+        return $this->belongsTo(Extracurricular::class, 'extracurricular_id');
     }
 }

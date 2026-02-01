@@ -17,6 +17,7 @@ class UserSeeder extends Seeder
     {
         // Admin
         User::create([
+            'uuid' => Str::uuid(),
             'name' => 'Super Admin',
             'email' => 'admin@ekskulio.test',
             'username' => 'admin',
@@ -30,6 +31,7 @@ class UserSeeder extends Seeder
 
         // Guru Kesiswaan
         User::create([
+            'uuid' => Str::uuid(),
             'name' => 'Guru Kesiswaan',
             'email' => 'kesiswaan@ekskulio.test',
             'username' => 'kesiswaan',
@@ -43,6 +45,7 @@ class UserSeeder extends Seeder
 
         // Pembina Ekstrakurikuler
         User::create([
+            'uuid' => Str::uuid(),
             'name' => 'Pembina',
             'email' => 'pembina@ekskulio.test',
             'username' => 'pembina',

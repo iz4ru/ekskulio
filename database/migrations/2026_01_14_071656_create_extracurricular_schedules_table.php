@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('extracurricular_schedules', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('extracurricular_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('extracurricular_id')->constrained('extracurriculars')->cascadeOnDelete();
             $table->enum('day', ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu']);
             $table->timestamps();
         });

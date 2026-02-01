@@ -1,0 +1,226 @@
+@extends('role.kesiswaan.layouts.app')
+@section('title', 'Ekskulio | Tambah Tahun Ajaran')
+@section('content')
+
+    <div class="p-4 border-2 border-gray-200 border-dashed rounded-md w-full mt-14">
+
+        {{-- Alert Section --}}
+        <div class="w-full space-y-3">
+            @if (session('success'))
+                <div class="alert alert-success alert-dismissible relative mb-4 w-full text-sm py-2 px-4 bg-green-100 text-green-500 border border-green-500 rounded-md opacity-0 transition-opacity duration-150 ease-in-out"
+                    role="alert" id="successAlert">
+                    <i class="fa fa-circle-check absolute left-4 top-1/2 -translate-y-1/2"></i>
+                    <p class="ml-6">{{ session('success') }}</p>
+                </div>
+            @endif
+
+            @if ($errors->any())
+                <div class="alert alert-danger alert-dismissible relative mb-4 w-full text-sm py-2 px-4 bg-red-100 text-red-500 border border-red-500 rounded-md opacity-0 transition-opacity duration-150 ease-in-out"
+                    role="alert" id="errorAlert">
+                    <i class="fa fa-circle-exclamation absolute left-4 top-1/2 -translate-y-1/2"></i>
+                    <ul class="list-none m-0 p-0">
+                        @foreach ($errors->all() as $error)
+                            <li class="ml-6">{{ $error }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+            @endif
+        </div>
+
+        <a href="{{ route('academic-years.index') }}"
+            class="text-sm inline-flex items-center gap-1 font-semibold text-gray-500 hover:text-[#0083E9] active:scale-[0.98] transition-all duration-300 ease-out">
+            <i class="fa-solid fa-chevron-left"></i>
+            <span>Kembali</span>
+        </a>
+
+        <div class="flex gap-4 my-4 justify-between">
+            <div>
+                <h1 class="text-xl lg:text-2xl font-semibold text-gray-600">Tambah Tahun Ajaran</h1>
+                <p class="text-sm lg:text-base text-gray-400">Tambahkan tahun ajaran baru.</p>
+            </div>
+        </div>
+
+        <div class="my-4 border-t-2 border-dashed border-gray-300 w-full"></div>
+
+        <section>
+            <div class="py-8 px-4 mx-auto max-w-2xl lg:py-16">
+                <h2 class="mb-4 text-xl font-bold text-gray-900">Tambahkan Tahun Ajaran Baru</h2>
+
+                <form action="{{ route('academic-years.store') }}" method="POST" id="academic-year-form">
+                    @csrf
+                    <input type="hidden" name="password" id="password-input" value="">
+
+                    <div class="grid gap-4 sm:grid-cols-2 sm:gap-6">
+
+                        {{-- Tahun Ajaran Awal --}}
+                        <div class="w-full">
+                            <label for="year-start" class="block mb-2 text-sm font-medium text-gray-900">
+                                Tahun Ajaran Awal
+                                <span class="text-red-500">*</span>
+                            </label>
+                            <input type="number" name="year-start" id="year-start" placeholder="Masukkan tahun awal"
+                                min="2000" max="2099" step="1"
+                                class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-md focus:ring-[#0083E9] focus:border-[#0083E9] block w-full p-2.5"
+                                value="{{ old('year-start') }}" required>
+                            <p class="mt-1 text-xs text-gray-500">Tahun akhir akan terisi otomatis</p>
+                        </div>
+
+                        {{-- Tahun Ajaran Akhir --}}
+                        <div class="w-full">
+                            <label for="year-end" class="block mb-2 text-sm font-medium text-gray-900">
+                                Tahun Ajaran Akhir
+                                <span class="text-red-500">*</span>
+                            </label>
+                            <input type="number" name="year-end" id="year-end" placeholder="Masukkan tahun akhir"
+                                min="2000" max="2099" step="1"
+                                class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-md focus:ring-[#0083E9] focus:border-[#0083E9] block w-full p-2.5"
+                                value="{{ old('year-end') }}" required>
+                            <p class="mt-1 text-xs text-gray-500">Tahun awal akan terisi otomatis</p>
+                        </div>
+
+                        {{-- Semester --}}
+                        <div class="w-full">
+                            <label for="semester" class="block mb-2 text-sm font-medium text-gray-900">
+                                Semester
+                                <span class="text-red-500">*</span>
+                            </label>
+                            <div class="flex flex-row gap-4 w-full">
+                                <div
+                                    class="flex-1 flex items-center ps-4 border border-gray-300 bg-gray-50 rounded-md hover:bg-gray-100 transition-colors cursor-pointer">
+                                    <input id="semester-ganjil" type="radio" value="Ganjil" name="semester"
+                                        class="w-4 h-4 text-[#0083E9] bg-gray-100 border-gray-300 focus:ring-[#0083E9] focus:ring-2 cursor-pointer"
+                                        {{ old('semester') == 'Ganjil' ? 'checked' : '' }}>
+                                    <label for="semester-ganjil"
+                                        class="w-full py-3 select-none ms-2 text-sm font-medium text-gray-900 cursor-pointer">
+                                        Ganjil
+                                    </label>
+                                </div>
+
+                                <div
+                                    class="flex-1 flex items-center ps-4 border border-gray-300 bg-gray-50 rounded-md hover:bg-gray-100 transition-colors cursor-pointer">
+                                    <input id="semester-genap" type="radio" value="Genap" name="semester"
+                                        class="w-4 h-4 text-[#0083E9] bg-gray-100 border-gray-300 focus:ring-[#0083E9] focus:ring-2 cursor-pointer"
+                                        {{ old('semester') == 'Genap' ? 'checked' : '' }}>
+                                    <label for="semester-genap"
+                                        class="w-full py-3 select-none ms-2 text-sm font-medium text-gray-900 cursor-pointer">
+                                        Genap
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        {{-- Status --}}
+                        <div class="w-full">
+                            <label for="status-toggle" class="block mb-2 text-sm font-medium text-gray-900">Status</label>
+                            <div class="mt-4">
+                                <label class="inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" name="status" id="status-toggle" class="sr-only peer"
+                                        value="1" {{ old('status') ? 'checked' : '' }}>
+                                    <div
+                                        class="relative w-14 h-8 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-6 after:content-[''] after:absolute after:top-1 after:start-1 after:bg-white after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-[#0083E9]">
+                                    </div>
+                                    <span class="ms-3 text-sm font-medium text-gray-900" id="status-text">Tidak
+                                        Aktif</span>
+                                </label>
+                                <p class="mt-1 text-xs text-gray-500">Mengaktifkan status akan menonaktifkan tahun ajaran
+                                    lain</p>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <div class="flex justify-end mt-6">
+                        <button type="submit"
+                            class="inline-flex cursor-pointer items-center px-5 py-2.5 text-sm font-medium text-center text-white bg-[#0083E9] rounded-md focus:ring-4 focus:ring-blue-300 hover:bg-[#0d65d9] active:scale-[0.98] transition-all duration-300 ease-out">
+                            Tambahkan Tahun Ajaran
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </section>
+
+    </div>
+
+    @push('scripts')
+        <script>
+            const yearStart = document.getElementById('year-start');
+            const yearEnd = document.getElementById('year-end');
+
+            yearStart.addEventListener('input', function() {
+                if (this.value && this.value.length === 4) {
+                    yearEnd.value = parseInt(this.value) + 1;
+                }
+            });
+
+            yearEnd.addEventListener('input', function() {
+                if (this.value && this.value.length === 4) {
+                    yearStart.value = parseInt(this.value) - 1;
+                }
+            });
+
+            const statusToggle = document.getElementById('status-toggle');
+            const statusText = document.getElementById('status-text');
+
+            function updateStatusText() {
+                if (statusToggle.checked) {
+                    statusText.textContent = 'Diaktifkan';
+                    statusText.classList.add('text-[#0083E9]', 'font-semibold');
+                } else {
+                    statusText.textContent = 'Tidak Aktif';
+                    statusText.classList.remove('text-[#0083E9]', 'font-semibold');
+                }
+            }
+
+            updateStatusText();
+
+            statusToggle.addEventListener('change', updateStatusText);
+
+            // Handle form submit dengan sweetalert jika status aktif
+            const academicYearForm = document.getElementById('academic-year-form');
+            academicYearForm.addEventListener('submit', async function(e) {
+                e.preventDefault();
+
+                // Jika status toggle aktif, minta password
+                if (statusToggle.checked) {
+                    const yearStartValue = yearStart.value;
+                    const yearEndValue = yearEnd.value;
+                    const academicYearName = yearStartValue && yearEndValue ?
+                        `${yearStartValue}/${yearEndValue}` : 'tahun ajaran baru';
+
+                    const {
+                        value: password
+                    } = await Swal.fire({
+                        title: 'Konfirmasi Perubahan Status',
+                        html: `<p>Anda akan <strong>mengaktifkan</strong> tahun ajaran <strong>${academicYearName}</strong>.</p>
+                               <p class="mt-3 text-sm text-gray-600">Masukkan password untuk melanjutkan:</p>`,
+                        input: 'password',
+                        inputPlaceholder: 'Masukkan password Anda',
+                        inputAttributes: {
+                            autocapitalize: 'off',
+                            autocorrect: 'off'
+                        },
+                        showCancelButton: true,
+                        cancelButtonText: 'Batal',
+                        confirmButtonText: 'Konfirmasi',
+                        confirmButtonColor: '#0083E9',
+                        cancelButtonColor: '#EF4444',
+                        allowOutsideClick: false,
+                        allowEscapeKey: false,
+                        didOpen: (modal) => {
+                            modal.querySelector('input').focus();
+                        }
+                    });
+
+                    if (password) {
+                        document.getElementById('password-input').value = password;
+                        this.submit();
+                    }
+                } else {
+                    // Jika toggle off, langsung submit tanpa password
+                    this.submit();
+                }
+            });
+        </script>
+    @endpush
+
+@endsection

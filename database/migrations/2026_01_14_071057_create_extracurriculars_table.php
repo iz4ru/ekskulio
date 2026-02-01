@@ -16,6 +16,9 @@ return new class extends Migration
             $table->string('name');
             $table->string('code')->unique();
             $table->text('description')->nullable();
+            $table->text('award')->nullable();
+            $table->foreignId('category_id')->nullable()->constrained('extracurricular_categories')->cascadeOnDelete();
+            $table->boolean('is_active')->default(true);
             $table->timestamps();
         });
     }

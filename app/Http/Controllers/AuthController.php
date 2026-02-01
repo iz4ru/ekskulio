@@ -17,7 +17,7 @@ class AuthController extends Controller
     {
         // 1. Validasi input
         $request->validate([
-            'login'    => ['required', 'string'], // 1 field: email / username
+            'login' => ['required', 'string'], // 1 field: email / username
             'password' => ['required', 'string'],
         ]);
 
@@ -28,7 +28,7 @@ class AuthController extends Controller
         // 3. Ambil user dulu (untuk cek is_active & pesan error spesifik)
         $user = User::where($loginField, $loginValue)->first();
 
-        if (! $user) {
+        if (!$user) {
             return back()
                 ->withErrors([
                     'login' => 'Akun tidak ditemukan.',
@@ -36,7 +36,7 @@ class AuthController extends Controller
                 ->onlyInput('login');
         }
 
-        if (! $user->is_active) {
+        if (!$user->is_active) {
             return back()
                 ->withErrors([
                     'login' => 'Akun Anda tidak aktif. Silakan hubungi pihak kesiswaan atau admin.',
@@ -47,7 +47,7 @@ class AuthController extends Controller
         // 4. Attempt login dengan field dinamis
         $credentials = [
             $loginField => $loginValue,
-            'password'  => $request->password,
+            'password' => $request->password,
         ];
 
         if (Auth::attempt($credentials, $request->boolean('remember'))) {
@@ -56,10 +56,18 @@ class AuthController extends Controller
             $user = Auth::user();
 
             return match ($user->role) {
-                'kesiswaan' => redirect()->route('kesiswaan.dashboard'),
-                'pembina'   => redirect()->route('pembina.dashboard'),
-                'admin'     => redirect()->route('admin.dashboard'),
-                // default     => redirect()->route('home'),
+                'kesiswaan' => redirect()
+                    ->route('kesiswaan.dashboard')
+                    ->with('success', 'Login berhasil, selamat datang kembali ' . Auth::user()->name . ' !'),
+                'pembina' => redirect()
+                    ->route('pembina.dashboard')
+                    ->with('success', 'Login berhasil, selamat datang kembali ' . Auth::user()->name . ' !'),
+                'admin' => redirect()
+                    ->route('admin.dashboard')
+                    ->with('success', 'Login berhasil, selamat datang kembali ' . Auth::user()->name . ' !'),
+                default => redirect()
+                    ->route('login')
+                    ->withErrors(['login' => 'Role pengguna tidak dikenali.']),
             };
         }
 
@@ -68,5 +76,14 @@ class AuthController extends Controller
                 'password' => 'Password yang Anda masukkan tidak sesuai.',
             ])
             ->onlyInput('login');
+    }
+
+    public function logout(Request $request)
+    {
+        Auth::logout();
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+
+        return redirect()->route('login')->with('success', 'Logout berhasil, sampai jumpa lagi!');
     }
 }
