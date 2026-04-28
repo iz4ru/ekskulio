@@ -52,6 +52,14 @@
                 </x-nav-link>
             </li>
 
+            <!-- Keanggotaan Ekskul -->
+            <li>
+                <x-nav-link href="{{ route('memberships.index') }}" :active="request()->routeIs(['memberships.index', 'memberships.create'])">
+                    <i class="fa-solid fa-users-between-lines text-md"></i>
+                    <span class="ml-3">Keanggotaan Ekskul</span>
+                </x-nav-link>
+            </li>
+
             <!-- Akun -->
             <li>
                 <x-nav-link href="{{ route('user-management.index') }}" :active="request()->routeIs(['user-management.index', 'user-management.create', 'user-management.edit'])">
@@ -70,7 +78,7 @@
 
             <!-- Penilaian Siswa -->
             <li>
-                <x-nav-link href="#">
+                <x-nav-link href="{{ route('scores.index') }}" :active="request()->routeIs(['scores.index', 'scores.input'])">
                     <i class="fa-solid fa-clipboard-list text-md"></i>
                     <span class="ml-3">Penilaian Siswa</span>
                 </x-nav-link>
@@ -78,7 +86,7 @@
 
             <!-- Laporan -->
             <li>
-                <x-nav-link href="#">
+                <x-nav-link href="{{ route('reports.index') }}" :active="request()->routeIs(['reports.index', 'reports.preview'])">
                     <i class="fa-solid fa-file-alt text-md"></i>
                     <span class="ml-3">Laporan</span>
                 </x-nav-link>

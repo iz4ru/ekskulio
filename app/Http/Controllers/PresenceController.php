@@ -2,12 +2,14 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Presence;
 use App\Models\AcademicYear;
+use App\Models\Extracurricular;
+use App\Models\ExtracurricularMembership;
+use App\Models\Presence;
+use App\Models\PresenceDetail;
+use App\Models\Student;
 use App\Models\StudentClass;
 use Illuminate\Http\Request;
-use App\Models\PresenceDetail;
-use App\Models\Extracurricular;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 
@@ -21,15 +23,26 @@ class PresenceController extends Controller
         return view('role.kesiswaan.contents.presence.index', $x);
     }
 
-    public function show($id)
+    public function show(Request $request, $id)
     {
         $x['extracurricular'] = Extracurricular::findOrFail($id);
+        $activeAY = AcademicYear::getActiveYear();
+        $selectedAY = $activeAY;
 
-        // ✅ Ambil data presence (per pertemuan)
-        $x['presences'] = Presence::with(['academicYear', 'details'])
-            ->where('extracurricular_id', $id)
-            ->orderBy('date', 'desc')
-            ->get();
+        if ($request->filled('academic_year_id')) {
+            $selectedAY = AcademicYear::find($request->academic_year_id);
+        }
+
+        $query = Presence::with(['academicYear', 'details'])
+            ->where('extracurricular_id', $id);
+
+        if ($selectedAY) {
+            $query->where('academic_year_id', $selectedAY->id);
+        }
+
+        $x['presences'] = $query->orderBy('date', 'desc')->get();
+        $x['selectedAY'] = $selectedAY;
+        $x['academicYears'] = AcademicYear::orderBy('year', 'desc')->orderBy('semester', 'desc')->get();
 
         return view('role.kesiswaan.contents.presence.show', $x);
     }
@@ -37,17 +50,30 @@ class PresenceController extends Controller
     public function create(Request $request)
     {
         $extracurricularId = $request->extracurricular_id;
+        $activeAY = AcademicYear::getActiveYear();
 
-        $x['extracurricular'] = Extracurricular::with('students')->findOrFail($extracurricularId);
-        $x['students'] = $x['extracurricular']->students->sortBy('name, desc');
+        $x['extracurricular'] = Extracurricular::findOrFail($extracurricularId);
 
-        // if student_class = is_active = false, maka row siswa tersebut di disable
+        if (! $activeAY) {
+            return redirect()->route('presence.index')
+                ->withErrors(['error' => 'Tidak ada tahun ajaran aktif.']);
+        }
+
+        $x['students'] = Student::query()
+            ->whereHas('memberships', function ($query) use ($extracurricularId, $activeAY) {
+                $query->where('extracurricular_id', $extracurricularId)
+                    ->where('academic_year_id', $activeAY->id)
+                    ->where('status', 'aktif');
+            })
+            ->with(['studentClass', 'memberships' => function ($query) use ($extracurricularId, $activeAY) {
+                $query->where('extracurricular_id', $extracurricularId)
+                    ->where('academic_year_id', $activeAY->id);
+            }])
+            ->orderBy('name')
+            ->get();
+
         foreach ($x['students'] as $student) {
-            if (!$student->studentClass->is_active) {
-                $student->is_class_inactive = true;
-            } else {
-                $student->is_class_inactive = false;
-            }
+            $student->is_class_inactive = ! $student->studentClass || ! $student->studentClass->is_active;
         }
 
         return view('role.kesiswaan.contents.presence.create', $x);
@@ -58,13 +84,11 @@ class PresenceController extends Controller
         $validated = $request->validate([
             'extracurricular_id' => 'required|exists:extracurriculars,id',
             'date' => 'required|date',
-            // ❌ HAPUS: 'day' => 'required|string',
             'notes' => 'nullable|string',
             'attendance' => 'required|array',
             'attendance.*' => 'required|in:present,sick,permission,absent',
         ]);
 
-        // Cek duplikat
         $exists = Presence::where('extracurricular_id', $validated['extracurricular_id'])->whereDate('date', $validated['date'])->exists();
 
         if ($exists) {
@@ -73,21 +97,33 @@ class PresenceController extends Controller
                 ->withInput();
         }
 
-        // ✅ Buat presence (day otomatis dari attribute)
+        $activeAY = AcademicYear::getActiveYear();
+
+        if (! $activeAY) {
+            return back()->withErrors(['error' => 'Tidak ada tahun ajaran aktif.']);
+        }
+
         $presence = Presence::create([
             'extracurricular_id' => $validated['extracurricular_id'],
-            'academic_year_id' => AcademicYear::getActiveYear()->id,
+            'academic_year_id' => $activeAY->id,
             'date' => $validated['date'],
             'notes' => $validated['notes'],
         ]);
 
-        // Simpan detail per siswa
         foreach ($validated['attendance'] as $studentId => $status) {
-            PresenceDetail::create([
-                'presence_id' => $presence->id,
-                'student_id' => $studentId,
-                'status' => $status,
-            ]);
+            $membership = ExtracurricularMembership::where('student_id', $studentId)
+                ->where('extracurricular_id', $validated['extracurricular_id'])
+                ->where('academic_year_id', $activeAY->id)
+                ->first();
+
+            if ($membership) {
+                PresenceDetail::create([
+                    'presence_id' => $presence->id,
+                    'membership_id' => $membership->id,
+                    'student_id' => $studentId,
+                    'status' => $status,
+                ]);
+            }
         }
 
         return redirect()->route('presence.show', $validated['extracurricular_id'])->with('success', 'Presensi berhasil ditambahkan!');
@@ -107,7 +143,6 @@ class PresenceController extends Controller
 
         $validated = $request->validate([
             'date' => 'required|date',
-            // ❌ HAPUS: 'day' => 'required|string',
             'notes' => 'nullable|string',
             'attendance' => 'required|array',
             'attendance.*' => 'required|in:present,sick,permission,absent',
@@ -118,14 +153,30 @@ class PresenceController extends Controller
             'notes' => $validated['notes'],
         ]);
 
-        // Update detail
+        $activeAY = $presence->academicYear;
+
         foreach ($validated['attendance'] as $studentId => $status) {
+            $membership = ExtracurricularMembership::where('student_id', $studentId)
+                ->where('extracurricular_id', $presence->extracurricular_id)
+                ->where('academic_year_id', $activeAY->id)
+                ->first();
+
+            $detailData = [
+                'presence_id' => $presence->id,
+                'student_id' => $studentId,
+                'status' => $status,
+            ];
+
+            if ($membership) {
+                $detailData['membership_id'] = $membership->id;
+            }
+
             PresenceDetail::updateOrCreate(
                 [
                     'presence_id' => $presence->id,
                     'student_id' => $studentId,
                 ],
-                ['status' => $status],
+                $detailData,
             );
         }
 
@@ -136,10 +187,9 @@ class PresenceController extends Controller
     {
         $presence = Presence::findOrFail($id);
 
-        // Validasi password
         $request->validate(['password' => 'required']);
 
-        if (!Hash::check($request->password, Auth::user()->password)) {
+        if (! Hash::check($request->password, Auth::user()->password)) {
             return back()->withErrors(['password' => 'Password salah!']);
         }
 

@@ -2,13 +2,13 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 
 class Extracurricular extends Model
 {
     use HasFactory;
-    
+
     protected $table = 'extracurriculars';
 
     protected $fillable = [
@@ -43,6 +43,16 @@ class Extracurricular extends Model
     public function presenceSummaries()
     {
         return $this->hasMany(PresenceSummary::class, 'extracurricular_id');
+    }
+
+    public function memberships()
+    {
+        return $this->hasMany(ExtracurricularMembership::class);
+    }
+
+    public function activeMemberships()
+    {
+        return $this->memberships()->where('status', 'aktif');
     }
 
     public function students()

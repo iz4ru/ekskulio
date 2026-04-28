@@ -32,7 +32,7 @@
 
 </head>
 
-<body class="bg-[#FAFAFA] overflow-x-hidden">
+<body class="bg-size-[40px_40px] bg-[radial-gradient(circle,rgba(211,211,211,0.4)_0_2px,transparent_2.1px)] overflow-x-hidden">
 
     @yield('content')
 

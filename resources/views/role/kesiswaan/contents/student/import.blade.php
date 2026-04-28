@@ -139,6 +139,22 @@
                             </p>
                         </div>
 
+                        {{-- Info --}}
+                        <div class="sm:col-span-2">
+                            <div class="p-4 bg-blue-50 border border-blue-200 rounded-md">
+                                <h4 class="font-medium text-blue-800 mb-2">
+                                    <i class="fa-solid fa-info-circle mr-2"></i>
+                                    Informasi Grade Otomatis
+                                </h4>
+                                <ul class="text-sm text-blue-700 space-y-1">
+                                    <li>Grade akan <strong>dihitung otomatis</strong> dari tahun masuk siswa</li>
+                                    <li>Jika ada kolom <code class="bg-blue-100 px-1 rounded">tingkat</code> di Excel, 
+                                        nilai tersebut akan digunakan sebagai override</li>
+                                    <li>Contoh: Tahun masuk 2024 = Grade X, 2023 = Grade XI, 2022 = Grade XII</li>
+                                </ul>
+                            </div>
+                        </div>
+
                     </div>
 
                     <div class="flex justify-end mt-6">

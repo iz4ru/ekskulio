@@ -50,6 +50,31 @@
             <span>Tambahkan Data Presensi</span>
         </a>
 
+        <form method="GET" class="my-4 flex flex-wrap gap-3 items-end">
+            <div class="flex-1 min-w-[200px]">
+                <label for="academic_year_id" class="block text-xs font-medium text-gray-600 mb-1">Tahun Ajaran</label>
+                <select name="academic_year_id" id="academic_year_id"
+                    class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md">
+                    <option value="">Semua Tahun Ajaran</option>
+                    @foreach ($academicYears as $ay)
+                        <option value="{{ $ay->id }}" {{ $selectedAY?->id == $ay->id ? 'selected' : '' }}>
+                            {{ $ay->display_name }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+            <button type="submit"
+                class="px-4 py-2 text-sm font-medium text-white bg-gray-600 rounded-md hover:bg-gray-700 transition-all">
+                Filter
+            </button>
+            @if(request('academic_year_id'))
+                <a href="{{ route('presence.show', $extracurricular->id) }}"
+                    class="px-4 py-2 text-sm font-medium text-gray-600 border border-gray-300 rounded-md hover:bg-gray-100 transition-all">
+                    Reset
+                </a>
+            @endif
+        </form>
+
         <div class="my-4 border-t-2 border-dashed border-gray-300 w-full"></div>
 
         <div class="relative overflow-x-auto border-2 border-dashed border-gray-200 rounded-md p-4">

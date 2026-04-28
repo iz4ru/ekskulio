@@ -3,12 +3,19 @@
 namespace App\Http\Controllers;
 
 use App\Models\AcademicYear;
+use App\Services\GradeProgressionService;
+use App\Services\MembershipTransitionService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 
 class AcademicYearController extends Controller
 {
+    public function __construct(
+        private GradeProgressionService $gradeService,
+        private MembershipTransitionService $membershipService
+    ) {}
+
     public function index()
     {
         $x['academicYears'] = AcademicYear::orderBy('year', 'desc')->orderBy('semester', 'desc')->get();
@@ -29,7 +36,7 @@ class AcademicYearController extends Controller
                 'year-end' => 'required|integer|min:2000|max:2099|gt:year-start',
                 'semester' => 'required|in:Ganjil,Genap',
                 'status' => 'nullable|boolean',
-                'password' => 'required_if:status,1', // Password wajib jika status diaktifkan
+                'password' => 'required_if:status,1',
             ],
             [
                 'year-start.required' => 'Tahun ajaran awal wajib diisi',
@@ -47,49 +54,35 @@ class AcademicYearController extends Controller
             ],
         );
 
-        // Validasi tambahan: pastikan tahun akhir = tahun awal + 1
         if ($validated['year-end'] != $validated['year-start'] + 1) {
             return back()
-                ->withErrors([
-                    'year-end' => 'Tahun ajaran akhir harus tepat 1 tahun setelah tahun awal',
-                ])
+                ->withErrors(['year-end' => 'Tahun ajaran akhir harus tepat 1 tahun setelah tahun awal'])
                 ->withInput();
         }
 
-        // Jika status akan diaktifkan, validasi password
         if ($request->has('status') && $request->status) {
-            if (!Hash::check($request->password, Auth::user()->password)) {
+            if (! Hash::check($request->password, Auth::user()->password)) {
                 return back()
-                    ->withErrors([
-                        'password' => 'Password yang Anda masukkan salah!',
-                    ])
+                    ->withErrors(['password' => 'Password yang Anda masukkan salah!'])
                     ->withInput();
             }
         }
 
-        // Format tahun ajaran menjadi "2023/2024"
-        $academicYear = $validated['year-start'] . '/' . $validated['year-end'];
-
-        // Convert semester ke lowercase untuk sesuai dengan enum database
+        $academicYear = $validated['year-start'].'/'.$validated['year-end'];
         $semester = strtolower($validated['semester']);
 
-        // Cek apakah kombinasi tahun dan semester sudah ada
         $exists = AcademicYear::where('year', $academicYear)->where('semester', $semester)->exists();
 
         if ($exists) {
             return back()
-                ->withErrors([
-                    'year-start' => 'Tahun ajaran ' . $academicYear . ' semester ' . ucfirst($semester) . ' sudah ada',
-                ])
+                ->withErrors(['year-start' => 'Tahun ajaran '.$academicYear.' semester '.ucfirst($semester).' sudah ada'])
                 ->withInput();
         }
 
-        // Jika status di-check, nonaktifkan tahun ajaran lain
         if ($request->has('status') && $request->status) {
             AcademicYear::where('is_active', true)->update(['is_active' => false]);
         }
 
-        // Simpan data
         AcademicYear::create([
             'year' => $academicYear,
             'semester' => $semester,
@@ -98,7 +91,7 @@ class AcademicYearController extends Controller
 
         return redirect()
             ->route('academic-years.index')
-            ->with('success', 'Tahun ajaran ' . $academicYear . ' berhasil ditambahkan!');
+            ->with('success', 'Tahun ajaran '.$academicYear.' berhasil ditambahkan!');
     }
 
     public function edit(AcademicYear $academicYear)
@@ -118,46 +111,31 @@ class AcademicYearController extends Controller
             ],
             [
                 'year-start.required' => 'Tahun ajaran awal wajib diisi',
-                'year-start.integer' => 'Tahun ajaran awal harus berupa angka',
-                'year-start.min' => 'Tahun ajaran awal minimal 2000',
-                'year-start.max' => 'Tahun ajaran awal maksimal 2099',
                 'year-end.required' => 'Tahun ajaran akhir wajib diisi',
-                'year-end.integer' => 'Tahun ajaran akhir harus berupa angka',
-                'year-end.min' => 'Tahun ajaran akhir minimal 2000',
-                'year-end.max' => 'Tahun ajaran akhir maksimal 2099',
-                'year-end.gt' => 'Tahun ajaran akhir harus lebih besar dari tahun awal',
                 'semester.required' => 'Semester wajib dipilih',
-                'semester.in' => 'Semester harus Ganjil atau Genap',
             ],
         );
 
-        // Validasi tambahan: pastikan tahun akhir = tahun awal + 1
         if ($validated['year-end'] != $validated['year-start'] + 1) {
             return back()
-                ->withErrors([
-                    'year-end' => 'Tahun ajaran akhir harus tepat 1 tahun setelah tahun awal',
-                ])
+                ->withErrors(['year-end' => 'Tahun ajaran akhir harus tepat 1 tahun setelah tahun awal'])
                 ->withInput();
         }
 
-        // Format tahun ajaran menjadi "2023/2024"
-        $newAcademicYear = $validated['year-start'] . '/' . $validated['year-end'];
-
-        // Convert semester ke lowercase untuk sesuai dengan enum database
+        $newAcademicYear = $validated['year-start'].'/'.$validated['year-end'];
         $semester = strtolower($validated['semester']);
 
-        // Cek apakah kombinasi tahun dan semester sudah ada (kecuali data yang sedang diedit)
-        $exists = AcademicYear::where('year', $newAcademicYear)->where('semester', $semester)->where('id', '!=', $id)->exists();
+        $exists = AcademicYear::where('year', $newAcademicYear)
+            ->where('semester', $semester)
+            ->where('id', '!=', $id)
+            ->exists();
 
         if ($exists) {
             return back()
-                ->withErrors([
-                    'year-start' => 'Tahun ajaran ' . $newAcademicYear . ' semester ' . ucfirst($semester) . ' sudah ada',
-                ])
+                ->withErrors(['year-start' => 'Tahun ajaran '.$newAcademicYear.' semester '.ucfirst($semester).' sudah ada'])
                 ->withInput();
         }
 
-        // Update data
         $academicYear->update([
             'year' => $newAcademicYear,
             'semester' => $semester,
@@ -166,19 +144,17 @@ class AcademicYearController extends Controller
 
         return redirect()
             ->route('academic-years.index')
-            ->with('success', 'Tahun ajaran ' . $newAcademicYear . ' berhasil diperbarui!');
+            ->with('success', 'Tahun ajaran '.$newAcademicYear.' berhasil diperbarui!');
     }
 
     public function destroy(AcademicYear $academicYear, Request $request)
     {
-        // Validasi password
-        if (!Hash::check($request->password, Auth::user()->password)) {
+        if (! Hash::check($request->password, Auth::user()->password)) {
             return redirect()
                 ->route('academic-years.index')
                 ->withErrors(['error' => 'Password yang anda masukkan salah!']);
         }
 
-        // Cek apakah tahun ajaran sedang aktif
         if ($academicYear->is_active) {
             return redirect()
                 ->route('academic-years.index')
@@ -192,27 +168,107 @@ class AcademicYearController extends Controller
 
     public function toggleActive(AcademicYear $academicYear, Request $request)
     {
-        // Validasi password
-        if (!Hash::check($request->password, Auth::user()->password)) {
+        if (! Hash::check($request->password, Auth::user()->password)) {
             return redirect()
                 ->route('academic-years.index')
                 ->withErrors(['error' => 'Password yang anda masukkan salah!']);
         }
 
-        // Nonaktifkan semua tahun ajaran lain
         AcademicYear::where('id', '!=', $academicYear->id)
             ->where('is_active', true)
             ->update(['is_active' => false]);
 
-        // Toggle status
-        $academicYear->update([
-            'is_active' => !$academicYear->is_active,
-        ]);
+        $academicYear->update(['is_active' => ! $academicYear->is_active]);
 
         $status = $academicYear->is_active ? 'diaktifkan' : 'dinonaktifkan';
 
         return redirect()
             ->route('academic-years.index')
-            ->with('success', "Tahun ajaran {$academicYear->year} - " . ucfirst($academicYear->semester) . " berhasil {$status}!");
+            ->with('success', "Tahun ajaran {$academicYear->year} - ".ucfirst($academicYear->semester)." berhasil {$status}!");
+    }
+
+    public function transitionForm(Request $request)
+    {
+        $currentAY = AcademicYear::getActiveYear();
+        if (! $currentAY) {
+            return redirect()->route('academic-years.index')
+                ->withErrors(['error' => 'Tidak ada tahun ajaran aktif.']);
+        }
+
+        // ✅ Hapus logika getNextYear(), biarkan admin pilih dari dropdown
+        $targetAY = $request->filled('new_academic_year_id')
+            ? AcademicYear::find($request->new_academic_year_id)
+            : null;
+
+        $previewYear = $targetAY ?? $currentAY;
+        $preview = $this->gradeService->getTransitionPreview($currentAY, $previewYear);
+
+        // ✅ Filter available years: hanya yang valid secara kronologis
+        $availableYears = AcademicYear::where('is_active', false)
+            ->where(function ($q) use ($currentAY) {
+                $q->where('year', '>', $currentAY->year)
+                    ->orWhere(function ($sub) use ($currentAY) {
+                        $sub->where('year', $currentAY->year)
+                            ->where('semester', '!=', $currentAY->semester);
+                    });
+            })
+            ->orderBy('year')->orderBy('semester')
+            ->get();
+
+        return view('role.kesiswaan.contents.academic-year.transition', [
+            'currentYear' => $currentAY,
+            'targetYear' => $targetAY,
+            'studentsReady' => $preview['students'],
+            'membershipPreview' => $preview['memberships'],
+            'previewInfo' => $preview,
+            'availableYears' => $availableYears,
+        ]);
+    }
+
+    public function processTransition(Request $request)
+    {
+        $currentAY = AcademicYear::getActiveYear();
+        $newAY = AcademicYear::findOrFail($request->new_academic_year_id);
+
+        $request->validate([
+            'password' => 'required',
+            'new_academic_year_id' => 'required|exists:academic_years,id',
+        ], [
+            'password.required' => 'Password wajib diisi untuk melanjutkan transisi',
+            'new_academic_year_id.required' => 'Tahun ajaran tujuan wajib dipilih',
+        ]);
+
+        if (! Hash::check($request->password, Auth::user()->password)) {
+            return back()->withErrors(['password' => 'Password yang Anda masukkan salah!']);
+        }
+
+        if (! $currentAY) {
+            return back()->withErrors(['error' => 'Tidak ada tahun ajaran aktif saat ini.']);
+        }
+
+        if ($newAY->is_active) {
+            return back()->withErrors(['new_academic_year_id' => 'Tahun ajaran tujuan sudah aktif.']);
+        }
+
+        if ($newAY->year <= $currentAY->year && $newAY->semester === $currentAY->semester) {
+            return back()->withErrors(['new_academic_year_id' => 'Tahun ajaran tujuan harus lebih baru.']);
+        }
+
+        $results = $this->gradeService->processYearTransition($currentAY, $newAY);
+
+        if (! empty($results['errors'])) {
+            return redirect()
+                ->route('academic-years.index')
+                ->withErrors(['error' => 'Terjadi kesalahan: '.implode(', ', $results['errors'])]);
+        }
+
+        $message = match ($results['type']) {
+            'semester' => "Ganti semester berhasil! {$results['memberships_migrated']} keanggotaan dipindahkan.",
+            default => "Transisi berhasil! {$results['promoted']} siswa dinaikkan kelas, {$results['graduated']} siswa kelas XII (lulus), {$results['memberships_migrated']} keanggotaan dipindahkan.",
+        };
+
+        return redirect()
+            ->route('academic-years.index')
+            ->with('success', $message);
     }
 }

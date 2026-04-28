@@ -14,10 +14,13 @@ return new class extends Migration
         Schema::create('presence_details', function (Blueprint $table) {
             $table->id();
             $table->foreignId('presence_id')->constrained('presences')->onDelete('cascade');
-            $table->foreignId('student_id')->constrained('students')->onDelete('cascade');
+            $table->foreignId('membership_id')->constrained('extracurricular_memberships')->cascadeOnDelete();
+            $table->foreignId('student_id')->nullable()->constrained('students')->nullOnDelete();
             $table->enum('status', ['present', 'sick', 'permission', 'absent'])->default('absent');
             $table->text('notes')->nullable();
             $table->timestamps();
+
+            $table->index(['presence_id', 'membership_id']);
         });
     }
 

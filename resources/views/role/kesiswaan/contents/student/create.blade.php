@@ -60,8 +60,7 @@
                             <input type="text" name="name" id="name" placeholder="Masukkan nama siswa"
                                 class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-md focus:ring-[#0083E9] focus:border-[#0083E9] block w-full p-2.5"
                                 value="{{ old('name') }}" required>
-                            <p class="mt-1 text-xs text-gray-500">Masukkan nama lengkap siswa sesuai dengan dokumen resmi.
-                            </p>
+                            <p class="mt-1 text-xs text-gray-500">Masukkan nama lengkap siswa sesuai dengan dokumen resmi.</p>
                         </div>
 
                         {{-- NIS --}}
@@ -85,8 +84,9 @@
                             <input type="number" name="enrollment_year" id="enrollment_year"
                                 placeholder="Masukkan tahun masuk" min="2000" max="2099"
                                 class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-md focus:ring-[#0083E9] focus:border-[#0083E9] block w-full p-2.5"
-                                value="{{ old('enrollment_year') }}" required>
-                            <p class="mt-1 text-xs text-gray-500">Contoh: 2023</p>
+                                value="{{ old('enrollment_year') ?? date('Y') }}" required
+                                data-academic-year-start="{{ $activeAY ? (int)substr($activeAY->year, 0, 4) : '' }}">
+                            <p class="mt-1 text-xs text-gray-500">Contoh: 2024</p>
                         </div>
 
                         {{-- Kelas --}}
@@ -133,50 +133,42 @@
                             <p class="mt-1 text-xs text-gray-500">Pilih kelas dari daftar</p>
                         </div>
 
-                        {{-- Ekstrakurikuler --}}
-                        <div class="w-full relative">
-                            <label for="student_extracurricular" class="block mb-2 text-sm font-medium text-gray-900">
-                                Ekstrakurikuler
+                        {{-- Tingkat (Auto-calculate) --}}
+                        <div class="w-full">
+                            <label for="grade_override" class="block mb-2 text-sm font-medium text-gray-900">
+                                Tingkat
+                                <span class="text-red-500">*</span>
                             </label>
-
+                            
                             <div class="relative">
-                                <input type="text" name="student_extracurricular" id="student_extracurricular"
-                                    placeholder="Pilih atau ketik ekstrakurikuler" autocomplete="off"
+                                <select name="grade_override" id="grade_override"
                                     class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-md focus:ring-[#0083E9] focus:border-[#0083E9] block w-full p-2.5 pr-10"
-                                    value="{{ old('student_extracurricular') }}">
-
+                                    required>
+                                    @foreach ($grades as $grade)
+                                        <option value="{{ $grade }}" {{ ($calculatedGrade ?? old('grade_override')) == $grade ? 'selected' : '' }}>
+                                            Kelas {{ $grade }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                                
                                 <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                                    <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor"
-                                        viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="m19 9-7 7-7-7" />
-                                    </svg>
+                                    <i class="fa-solid fa-rotate text-gray-400 text-xs" title="Akan dihitung otomatis dari tahun masuk"></i>
                                 </div>
                             </div>
-
-                            <div id="extracurricular-dropdown"
-                                class="hidden absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
-                                <ul class="py-1">
-                                    @foreach ($extracurriculars as $extracurricular)
-                                        <li>
-                                            <button type="button"
-                                                class="extracurricular-option w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-[#0083E9] transition-colors duration-150"
-                                                data-value="{{ $extracurricular->name }}"
-                                                data-id="{{ $extracurricular->id }}">
-                                                {{ $extracurricular->name }}
-                                            </button>
-                                        </li>
-                                    @endforeach
-                                    @if ($extracurriculars->isEmpty())
-                                        <li class="px-4 py-2 text-sm text-gray-500 italic">Tidak ada data ekstrakurikuler
-                                        </li>
+                            
+                            <p class="mt-1 text-xs text-gray-500">
+                                <i class="fa-solid fa-info-circle mr-1"></i>
+                                Default: <span id="calculated-grade" class="font-medium text-blue-600">
+                                    @if ($calculatedGrade)
+                                        Kelas {{ $calculatedGrade }} (dihitung dari tahun masuk)
+                                    @else
+                                        Isi tahun masuk terlebih dahulu
                                     @endif
-                                </ul>
-                            </div>
-
-                            <input type="hidden" name="extracurricular_id" id="extracurricular_id"
-                                value="{{ old('extracurricular_id') }}">
-                            <p class="mt-1 text-xs text-gray-500">Pilih ekstrakurikuler dari daftar (opsional)</p>
+                                </span>
+                            </p>
+                            
+                            {{-- Hidden input for form submission --}}
+                            <input type="hidden" name="grade" id="grade" value="">
                         </div>
 
                         {{-- Penghargaan Siswa --}}
@@ -206,34 +198,61 @@
     @push('scripts')
         <script>
             document.addEventListener('DOMContentLoaded', function() {
-                // ===== KELAS DROPDOWN =====
                 const studentClassInput = document.getElementById('student_class');
                 const classDropdown = document.getElementById('class-dropdown');
                 const classIdInput = document.getElementById('class_id');
                 const classOptions = document.querySelectorAll('.class-option');
+                
+                const enrollmentYearInput = document.getElementById('enrollment_year');
+                const gradeSelect = document.getElementById('grade_override');
+                const calculatedGradeSpan = document.getElementById('calculated-grade');
+                
+                function updateCalculatedGrade() {
+                    const enrollmentYear = parseInt(enrollmentYearInput.value);
+                    const academicYearStart = parseInt(enrollmentYearInput.dataset.academicYearStart);
+                    
+                    if (!enrollmentYear || enrollmentYear < 2000 || enrollmentYear > 2100) {
+                        calculatedGradeSpan.textContent = 'Isi tahun masuk terlebih dahulu';
+                        return;
+                    }
+                    
+                    if (!academicYearStart) {
+                        calculatedGradeSpan.textContent = 'Tidak ada tahun ajaran aktif';
+                        return;
+                    }
+                    
+                    const yearsDiff = academicYearStart - enrollmentYear;
+                    
+                    let grade = 'X';
+                    if (yearsDiff >= 2) grade = 'XII';
+                    else if (yearsDiff === 1) grade = 'XI';
+                    
+                    calculatedGradeSpan.innerHTML = `Kelas <strong>${grade}</strong> (dihitung dari tahun masuk)`;
+                    
+                    gradeSelect.value = grade;
+                }
+                
+                enrollmentYearInput.addEventListener('input', updateCalculatedGrade);
+                
+                updateCalculatedGrade();
 
-                // Toggle dropdown kelas
                 studentClassInput.addEventListener('focus', function() {
                     classDropdown.classList.remove('hidden');
                 });
 
-                // Filter kelas berdasarkan input
                 studentClassInput.addEventListener('input', function() {
                     const searchTerm = this.value.toLowerCase();
-                    let hasResults = false;
 
                     classOptions.forEach(option => {
                         const optionText = option.getAttribute('data-value').toLowerCase();
                         if (optionText.includes(searchTerm)) {
                             option.parentElement.classList.remove('hidden');
-                            hasResults = true;
                         } else {
                             option.parentElement.classList.add('hidden');
                         }
                     });
                 });
 
-                // Pilih kelas dari dropdown
                 classOptions.forEach(option => {
                     option.addEventListener('click', function() {
                         const value = this.getAttribute('data-value');
@@ -245,54 +264,14 @@
                     });
                 });
 
-                // ===== EKSTRAKURIKULER DROPDOWN =====
-                const extracurricularInput = document.getElementById('student_extracurricular');
-                const extracurricularDropdown = document.getElementById('extracurricular-dropdown');
-                const extracurricularIdInput = document.getElementById('extracurricular_id');
-                const extracurricularOptions = document.querySelectorAll('.extracurricular-option');
-
-                // Toggle dropdown ekstrakurikuler
-                extracurricularInput.addEventListener('focus', function() {
-                    extracurricularDropdown.classList.remove('hidden');
-                });
-
-                // Filter ekstrakurikuler berdasarkan input
-                extracurricularInput.addEventListener('input', function() {
-                    const searchTerm = this.value.toLowerCase();
-                    let hasResults = false;
-
-                    extracurricularOptions.forEach(option => {
-                        const optionText = option.getAttribute('data-value').toLowerCase();
-                        if (optionText.includes(searchTerm)) {
-                            option.parentElement.classList.remove('hidden');
-                            hasResults = true;
-                        } else {
-                            option.parentElement.classList.add('hidden');
-                        }
-                    });
-                });
-
-                // Pilih ekstrakurikuler dari dropdown
-                extracurricularOptions.forEach(option => {
-                    option.addEventListener('click', function() {
-                        const value = this.getAttribute('data-value');
-                        const id = this.getAttribute('data-id');
-
-                        extracurricularInput.value = value;
-                        extracurricularIdInput.value = id;
-                        extracurricularDropdown.classList.add('hidden');
-                    });
-                });
-
-                // Close dropdowns when clicking outside
                 document.addEventListener('click', function(e) {
                     if (!studentClassInput.contains(e.target) && !classDropdown.contains(e.target)) {
                         classDropdown.classList.add('hidden');
                     }
-                    if (!extracurricularInput.contains(e.target) && !extracurricularDropdown.contains(e
-                            .target)) {
-                        extracurricularDropdown.classList.add('hidden');
-                    }
+                });
+                
+                document.getElementById('student-form').addEventListener('submit', function(e) {
+                    document.getElementById('grade').value = gradeSelect.value;
                 });
             });
         </script>

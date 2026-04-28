@@ -16,10 +16,12 @@ return new class extends Migration
             $table->string('id_number')->unique();
             $table->uuid('uuid')->unique();
             $table->string('name');
-            $table->foreignId('class_id')->nullable()->constrained('student_classes')->cascadeOnDelete();
+            $table->foreignId('class_id')->nullable()->constrained('student_classes')->nullOnDelete();
+            $table->enum('grade', ['X', 'XI', 'XII'])->nullable();
+            $table->enum('status', ['aktif', 'lulus', 'mutasi'])->default('aktif');
             $table->year('enrollment_year');
             $table->string('award')->nullable();
-            $table->foreignId('extracurricular_id')->nullable()->constrained('extracurriculars')->cascadeOnDelete();
+            $table->softDeletes();
             $table->timestamps();
         });
     }

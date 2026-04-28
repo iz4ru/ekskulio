@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('student_classes', function (Blueprint $table) {
             $table->id();
             $table->string('name');
-            $table->boolean('is_active')->defauslt(true);
+            $table->boolean('is_active')->default(true);
             $table->timestamps();
         });
     }

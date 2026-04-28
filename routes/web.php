@@ -1,22 +1,27 @@
 <?php
 
+use App\Http\Controllers\AcademicYearController;
+use App\Http\Controllers\AuthController;
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\ExtracurricularCategoryController;
+use App\Http\Controllers\ExtracurricularController;
+use App\Http\Controllers\ExtracurricularMembershipController;
+use App\Http\Controllers\PresenceController;
+use App\Http\Controllers\ReportController;
+use App\Http\Controllers\ScoreController;
+use App\Http\Controllers\StudentClassController;
+use App\Http\Controllers\StudentController;
+use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\AuthController;
-use App\Http\Controllers\UserController;
-use App\Http\Controllers\StudentController;
-use App\Http\Controllers\DashboardController;
-use App\Http\Controllers\AcademicYearController;
-use App\Http\Controllers\StudentClassController;
-use App\Http\Controllers\ExtracurricularController;
-use App\Http\Controllers\ExtracurricularCategoryController;
-use App\Http\Controllers\PresenceController;
 
 Route::get('/', function () {
     if (Auth::check()) {
         $role = Auth::user()->role;
-        return redirect()->route($role . '.dashboard');
+
+        return redirect()->route($role.'.dashboard');
     }
+
     return redirect()->route('login');
 });
 
@@ -40,6 +45,8 @@ Route::middleware(['auth', 'check.role:kesiswaan'])->group(function () {
             Route::put('/{academicYear}', [AcademicYearController::class, 'update'])->name('update');
             Route::delete('/{academicYear}', [AcademicYearController::class, 'destroy'])->name('destroy');
             Route::patch('/{academicYear}/toggle', [AcademicYearController::class, 'toggleActive'])->name('toggle');
+            Route::get('/transition', [AcademicYearController::class, 'transitionForm'])->name('transition.form');
+            Route::post('/transition', [AcademicYearController::class, 'processTransition'])->name('transition.process');
         });
 
     Route::prefix('extracurricular-category')
@@ -96,6 +103,36 @@ Route::middleware(['auth', 'check.role:kesiswaan'])->group(function () {
             Route::get('/{student}/edit', [StudentController::class, 'edit'])->name('edit');
             Route::put('/{student}', [StudentController::class, 'update'])->name('update');
             Route::delete('/{student}', [StudentController::class, 'destroy'])->name('destroy');
+        });
+
+    Route::prefix('scores')
+        ->name('scores.')
+        ->group(function () {
+            Route::get('/', [ScoreController::class, 'index'])->name('index');
+            Route::get('/input', [ScoreController::class, 'input'])->name('input');
+            Route::post('/', [ScoreController::class, 'store'])->name('store');
+            Route::get('/get-students', [ScoreController::class, 'getStudentsForScore'])->name('get-students');
+            Route::get('/export', [ScoreController::class, 'export'])->name('export');
+        });
+
+    Route::prefix('reports')
+        ->name('reports.')
+        ->group(function () {
+            Route::get('/', [ReportController::class, 'index'])->name('index');
+            Route::get('/preview', [ReportController::class, 'preview'])->name('preview');
+            Route::post('/export/excel', [ReportController::class, 'exportExcel'])->name('export.excel');
+            Route::post('/export/pdf', [ReportController::class, 'exportPdf'])->name('export.pdf');
+        });
+
+    Route::prefix('memberships')
+        ->name('memberships.')
+        ->group(function () {
+            Route::get('/', [ExtracurricularMembershipController::class, 'index'])->name('index');
+            Route::get('/create', [ExtracurricularMembershipController::class, 'create'])->name('create');
+            Route::post('/', [ExtracurricularMembershipController::class, 'store'])->name('store');
+            Route::get('/eligible-students', [ExtracurricularMembershipController::class, 'getEligibleStudents'])->name('eligible-students');
+            Route::patch('/{membership}/status', [ExtracurricularMembershipController::class, 'updateStatus'])->name('update.status');
+            Route::delete('/{membership}', [ExtracurricularMembershipController::class, 'destroy'])->name('destroy');
         });
 
     Route::prefix('user-management')

@@ -35,12 +35,20 @@
             </div>
         </div>
 
-        <a href="{{ route('academic-years.create') }}"
-            class="inline-flex cursor-pointer items-center px-5 py-2.5 gap-2 text-sm font-medium text-center text-white bg-[#0083E9] rounded-md focus:ring-4 focus:ring-blue-300 hover:bg-[#DEECFF] hover:text-[#0083E9] active:scale-[0.98]
-        transition-all duration-300 ease-out">
-            <i class="fa-solid fa-plus text-sm"></i>
-            <span>Tambah Tahun Ajaran</span>
-        </a>
+        <div class="inline-flex flex-col lg:flex-row gap-2">
+            <a href="{{ route('academic-years.create') }}"
+                class="inline-flex cursor-pointer items-center px-5 py-2.5 gap-2 text-sm font-medium text-center text-white bg-[#0083E9] rounded-md focus:ring-4 focus:ring-blue-300 hover:bg-[#DEECFF] hover:text-[#0083E9] active:scale-[0.98]
+            transition-all duration-300 ease-out">
+                <i class="fa-solid fa-plus text-sm"></i>
+                <span>Tambah Tahun Ajaran</span>
+            </a>
+            <a href="{{ route('academic-years.transition.form') }}"
+                class="inline-flex cursor-pointer items-center px-5 py-2.5 gap-2 text-sm font-medium text-center text-white bg-[#0083E9] rounded-md focus:ring-4 focus:ring-blue-300 hover:bg-[#DEECFF] hover:text-[#0083E9] active:scale-[0.98]
+            transition-all duration-300 ease-out">
+                <i class="fa-solid fa-forward text-sm"></i>
+                <span>Transisi Tahun Ajaran</span>
+            </a>
+        </div>
 
         <div class="my-4 border-t-2 border-dashed border-gray-300 w-full"></div>
 
