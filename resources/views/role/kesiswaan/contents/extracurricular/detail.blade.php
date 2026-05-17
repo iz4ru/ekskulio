@@ -52,7 +52,7 @@
 
         {{-- Informasi Umum --}}
         <div class="border border-gray-200 rounded-lg p-6 mb-6">
-            <h2 class="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+            <h2 class="text-sm md:text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
                 <i class="fa-solid fa-info-circle text-[#0083E9]"></i>
                 Informasi Umum
             </h2>
@@ -67,7 +67,9 @@
                 {{-- Kode Ekstrakurikuler --}}
                 <div>
                     <label class="block text-sm font-medium text-gray-500 mb-1">Kode</label>
-                    <p class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-[#0083E9]/10 text-[#0083E9]">{{ $extracurricular->code }}</p>
+                    <p
+                        class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-[#0083E9]/10 text-[#0083E9]">
+                        {{ $extracurricular->code }}</p>
                 </div>
 
                 {{-- Kategori --}}
@@ -134,7 +136,7 @@
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
             {{-- Deskripsi --}}
             <div class="border border-gray-200 rounded-lg p-6">
-                <h2 class="text-lg font-semibold text-gray-800 mb-3 flex items-center gap-2">
+                <h2 class="text-sm md:text-lg font-semibold text-gray-800 mb-3 flex items-center gap-2">
                     <i class="fa-solid fa-file-lines text-[#0083E9]"></i>
                     Deskripsi
                 </h2>
@@ -147,8 +149,8 @@
 
             {{-- Penghargaan dengan Scroll --}}
             <div class="border border-gray-200 rounded-lg p-6">
-                <h2 class="text-lg font-semibold text-gray-800 mb-3 flex items-center gap-2">
-                    <i class="fa-solid fa-trophy text-yellow-500"></i>
+                <h2 class="text-sm md:text-lg font-semibold text-gray-800 mb-3 flex items-center gap-2">
+                    <i class="fa-solid fa-trophy text-[#0083E9]"></i>
                     Penghargaan Ekstrakurikuler
                 </h2>
                 @if ($extracurricular->award)
@@ -182,102 +184,99 @@
         {{-- Daftar Siswa --}}
         <div class=" border border-gray-200 rounded-lg p-6">
             <div class="flex justify-between items-center mb-4">
-                <h2 class="text-lg font-semibold text-gray-800 flex items-center gap-2">
+                <h2 class="text-sm md:text-lg font-semibold text-gray-800 flex items-center gap-2">
                     <i class="fa-solid fa-users text-[#0083E9]"></i>
                     Daftar Siswa Peserta
                 </h2>
-                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-[#0083E9] text-white">
+                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-[#0083E9] text-white">
                     {{ $extracurricularStudent->count() }} Siswa
                 </span>
             </div>
 
             @if ($extracurricularStudent->isNotEmpty())
-                <div class="relative overflow-x-auto border-2 border-dashed border-gray-200 rounded-md p-4">
-
-                    <table id="pagination-table" class="min-w-full text-sm text-left text-gray-600">
-                        <thead>
-                            <tr>
-                                <th>
-                                    <span class="flex items-center">
-                                        No
-                                        <svg class="w-4 h-4 ms-1" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
-                                            width="24" height="24" fill="none" viewBox="0 0 24 24">
-                                            <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
-                                                stroke-width="2" d="m8 15 4 4 4-4m0-6-4-4-4 4" />
-                                        </svg>
-                                    </span>
-                                </th>
-                                <th>
-                                    <span class="flex items-center">
-                                        NIS
-                                        <svg class="w-4 h-4 ms-1" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
-                                            width="24" height="24" fill="none" viewBox="0 0 24 24">
-                                            <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
-                                                stroke-width="2" d="m8 15 4 4 4-4m0-6-4-4-4 4" />
-                                        </svg>
-                                    </span>
-                                </th>
-                                <th>
-                                    <span class="flex items-center">
-                                        Nama Siswa
-                                        <svg class="w-4 h-4 ms-1" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
-                                            width="24" height="24" fill="none" viewBox="0 0 24 24">
-                                            <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
-                                                stroke-width="2" d="m8 15 4 4 4-4m0-6-4-4-4 4" />
-                                        </svg>
-                                    </span>
-                                </th>
-                                <th>
-                                    <span class="flex items-center">
-                                        Kelas
-                                        <svg class="w-4 h-4 ms-1" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
-                                            width="24" height="24" fill="none" viewBox="0 0 24 24">
-                                            <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
-                                                stroke-width="2" d="m8 15 4 4 4-4m0-6-4-4-4 4" />
-                                        </svg>
-                                    </span>
-                                </th>
-                                <th>
-                                    <span class="flex items-center">
-                                        Tahun Masuk
-                                        <svg class="w-4 h-4 ms-1" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
-                                            width="24" height="24" fill="none" viewBox="0 0 24 24">
-                                            <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
-                                                stroke-width="2" d="m8 15 4 4 4-4m0-6-4-4-4 4" />
-                                        </svg>
-                                    </span>
-                                </th>
+                <table id="pagination-table" class="min-w-full text-sm text-left text-gray-600">
+                    <thead>
+                        <tr>
+                            <th>
+                                <span class="flex items-center">
+                                    No
+                                    <svg class="w-4 h-4 ms-1" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
+                                        width="24" height="24" fill="none" viewBox="0 0 24 24">
+                                        <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
+                                            stroke-width="2" d="m8 15 4 4 4-4m0-6-4-4-4 4" />
+                                    </svg>
+                                </span>
+                            </th>
+                            <th>
+                                <span class="flex items-center">
+                                    NIS
+                                    <svg class="w-4 h-4 ms-1" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
+                                        width="24" height="24" fill="none" viewBox="0 0 24 24">
+                                        <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
+                                            stroke-width="2" d="m8 15 4 4 4-4m0-6-4-4-4 4" />
+                                    </svg>
+                                </span>
+                            </th>
+                            <th>
+                                <span class="flex items-center">
+                                    Nama Siswa
+                                    <svg class="w-4 h-4 ms-1" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
+                                        width="24" height="24" fill="none" viewBox="0 0 24 24">
+                                        <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
+                                            stroke-width="2" d="m8 15 4 4 4-4m0-6-4-4-4 4" />
+                                    </svg>
+                                </span>
+                            </th>
+                            <th>
+                                <span class="flex items-center">
+                                    Kelas
+                                    <svg class="w-4 h-4 ms-1" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
+                                        width="24" height="24" fill="none" viewBox="0 0 24 24">
+                                        <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
+                                            stroke-width="2" d="m8 15 4 4 4-4m0-6-4-4-4 4" />
+                                    </svg>
+                                </span>
+                            </th>
+                            <th>
+                                <span class="flex items-center">
+                                    Tahun Masuk
+                                    <svg class="w-4 h-4 ms-1" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
+                                        width="24" height="24" fill="none" viewBox="0 0 24 24">
+                                        <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
+                                            stroke-width="2" d="m8 15 4 4 4-4m0-6-4-4-4 4" />
+                                    </svg>
+                                </span>
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach ($extracurricularStudent as $student)
+                            <tr class="hover:bg-gray-100 transition-colors transition-duration-300">
+                                <td>{{ $loop->iteration }}</td>
+                                <td class="font-medium text-gray-800 whitespace-nowrap">
+                                    {{ $student->id_number }}</td>
+                                <td class="font-medium text-gray-800 whitespace-nowrap">{{ $student->name }}</td>
+                                <td class="font-medium text-gray-800 whitespace-nowrap">
+                                    @if ($student->studentClass)
+                                        <span
+                                            class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-[#0083E9]/10 text-[#0083E9]">
+                                            {{ $student->studentClass->name }}
+                                        </span>
+                                    @else
+                                        <span class="text-gray-400 italic text-sm">-</span>
+                                    @endif
+                                </td>
+                                <td>
+                                    @if ($student->enrollment_year)
+                                        <span class="text-gray-700">{{ $student->enrollment_year }}</span>
+                                    @else
+                                        <span class="text-gray-400 italic text-sm">-</span>
+                                    @endif
+                                </td>
                             </tr>
-                        </thead>
-                        <tbody>
-                            @foreach ($extracurricularStudent as $student)
-                                <tr class="hover:bg-gray-100 transition-colors transition-duration-300">
-                                    <td>{{ $loop->iteration }}</td>
-                                    <td class="font-medium text-gray-800 whitespace-nowrap">
-                                        {{ $student->id_number }}</td>
-                                    <td class="font-medium text-gray-800 whitespace-nowrap">{{ $student->name }}</td>
-                                    <td class="font-medium text-gray-800 whitespace-nowrap">
-                                        @if ($student->studentClass)
-                                            <span
-                                                class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-[#0083E9]/10 text-[#0083E9]">
-                                                {{ $student->studentClass->name }}
-                                            </span>
-                                        @else
-                                            <span class="text-gray-400 italic text-sm">-</span>
-                                        @endif
-                                    </td>
-                                    <td>
-                                        @if ($student->enrollment_year)
-                                            <span class="text-gray-700">{{ $student->enrollment_year }}</span>
-                                        @else
-                                            <span class="text-gray-400 italic text-sm">-</span>
-                                        @endif
-                                    </td>
-                                </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-                </div>
+                        @endforeach
+                    </tbody>
+                </table>
             @else
                 <div class="text-center py-12 bg-gray-50 rounded-lg">
                     <i class="fa-solid fa-users-slash text-6xl text-gray-300 mb-4"></i>
@@ -286,7 +285,6 @@
                 </div>
             @endif
         </div>
-
 
     </div>
 

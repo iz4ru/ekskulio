@@ -57,6 +57,13 @@ class Extracurricular extends Model
 
     public function students()
     {
-        return $this->hasMany(Student::class, 'extracurricular_id');
+        return $this->hasManyThrough(
+            Student::class,
+            ExtracurricularMembership::class,
+            'extracurricular_id',
+            'id',
+            'id',
+            'student_id'
+        )->where('extracurricular_memberships.status', 'aktif');
     }
 }

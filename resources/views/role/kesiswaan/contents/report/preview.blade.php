@@ -34,7 +34,31 @@
                             <th class="px-2 py-3">Nama</th>
                             <th class="px-2 py-3">Kelas</th>
                             @foreach($presences as $p)
-                                <th class="px-1 py-3 text-center">{{ \Carbon\Carbon::parse($p->date)->format('d') }}</th>
+                                @php
+                                    $dayName = \Carbon\Carbon::parse($p->date)->locale('id')->isoFormat('dddd');
+                                @endphp
+                                <th class="px-1 py-3 text-center relative cursor-default select-none"
+                                    x-data="{ show: false, x: 0, y: 0 }"
+                                    @mouseenter="show = true; const r = $el.getBoundingClientRect(); x = r.left + r.width / 2; y = r.top"
+                                    @mouseleave="show = false"
+                                    @touchstart.passive="const r = $el.getBoundingClientRect(); x = r.left + r.width / 2; y = r.top; setTimeout(() => show = true, 300)"
+                                    @touchend.passive="setTimeout(() => show = false, 1000)"
+                                    @touchmove.passive="show = false">
+
+                                    {{ \Carbon\Carbon::parse($p->date)->format('d') }}
+
+                                    <template x-teleport="body">
+                                        <div x-show="show"
+                                            x-transition:enter="transition ease-out duration-150"
+                                            x-transition:enter-start="opacity-0 -translate-y-1"
+                                            x-transition:enter-end="opacity-100 translate-y-0"
+                                            :style="`position: fixed; left: ${x}px; top: ${y}px; transform: translate(-50%, calc(-100% - 8px)); z-index: 9999;`"
+                                            class="pointer-events-none bg-gray-800 text-white text-xs rounded px-2 py-1 whitespace-nowrap">
+                                            <span x-text="`{{ $dayName }}`"></span>
+                                            <div class="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-800"></div>
+                                        </div>
+                                    </template>
+                                </th>
                             @endforeach
                             <th class="px-2 py-3 text-center bg-green-50">H</th>
                             <th class="px-2 py-3 text-center bg-yellow-50">S</th>
@@ -71,13 +95,13 @@
                                         @endif
                                     </td>
                                 @endforeach
-                                @php $s = $stats[$student->id] ?? ['present'=>0,'sick'=>0,'permission'=>0,'absent'=>0,'total'=>0]; @endphp
+                                @php $s = $stats[$student->id] ?? ['present'=>0,'sick'=>0,'permission'=>0,'absent'=>0,'percentage'=>0]; @endphp
                                 <td class="px-2 py-3 text-center bg-green-50 font-medium">{{ $s['present'] }}</td>
                                 <td class="px-2 py-3 text-center bg-yellow-50">{{ $s['sick'] }}</td>
                                 <td class="px-2 py-3 text-center bg-blue-50">{{ $s['permission'] }}</td>
                                 <td class="px-2 py-3 text-center bg-red-50">{{ $s['absent'] }}</td>
                                 <td class="px-2 py-3 text-center bg-gray-50 font-bold">
-                                    {{ $s['total'] > 0 ? round(($s['present'] / $s['total']) * 100, 1) : 0 }}%
+                                    {{ $s['percentage'] ?? 0 }}%
                                 </td>
                             </tr>
                         @endforeach

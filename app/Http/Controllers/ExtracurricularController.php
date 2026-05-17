@@ -27,8 +27,15 @@ class ExtracurricularController extends Controller
     {
         $x['extracurricular'] = $extracurricular->load(['category', 'users.user', 'schedules']);
 
-        // Get students yang mengikuti ekstrakurikuler ini
-        $x['extracurricularStudent'] = Student::with('studentClass')->leftJoin('student_classes', 'students.class_id', '=', 'student_classes.id')->where('students.extracurricular_id', $extracurricular->id)->orderBy('student_classes.name', 'asc')->orderBy('students.name', 'asc')->select('students.*')->get();
+        $x['extracurricularStudent'] = Student::with('studentClass')
+            ->leftJoin('student_classes', 'students.class_id', '=', 'student_classes.id')
+            ->join('extracurricular_memberships', 'students.id', '=', 'extracurricular_memberships.student_id')
+            ->where('extracurricular_memberships.extracurricular_id', $extracurricular->id)
+            ->where('extracurricular_memberships.status', 'aktif')
+            ->orderBy('student_classes.name', 'asc')
+            ->orderBy('students.name', 'asc')
+            ->select('students.*')
+            ->get();
 
         return view('role.kesiswaan.contents.extracurricular.detail', $x);
     }

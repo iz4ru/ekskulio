@@ -37,21 +37,21 @@ class ReportController extends Controller
     {
         $request->validate([
             'extracurricular_id' => 'required|exists:extracurriculars,id',
-            'academic_year_id' => 'required|exists:academic_years,id',
-            'month' => 'required|integer|min:1|max:12',
-            'class_id' => 'nullable|exists:student_classes,id',
+            'academic_year_id'   => 'required|exists:academic_years,id',
+            'month'              => 'required|integer|min:1|max:12',
+            'class_id'           => 'nullable|exists:student_classes,id',
         ]);
 
         $extracurricular = Extracurricular::findOrFail($request->extracurricular_id);
-        $academicYear = AcademicYear::findOrFail($request->academic_year_id);
-        $month = (int) $request->month;
+        $academicYear    = AcademicYear::findOrFail($request->academic_year_id);
+        $studentClass    = $request->class_id ? StudentClass::findOrFail($request->class_id) : null;
+        $month           = (int) $request->month;
 
         $yearParts = explode('-', $academicYear->year);
         $startYear = (int) $yearParts[0];
-        $endYear = isset($yearParts[1]) ? (int) $yearParts[1] : $startYear + 1;
+        $endYear   = isset($yearParts[1]) ? (int) $yearParts[1] : $startYear + 1;
 
         $queryYear = $month >= 7 ? $startYear : $endYear;
-        $year = $queryYear;
         $monthName = $this->getMonthName($month);
 
         $presences = Presence::with(['details.student.studentClass'])
@@ -62,12 +62,19 @@ class ReportController extends Controller
             ->orderBy('date')
             ->get();
 
+        $totalSessions = count($presences);
+
         $students = collect();
         foreach ($presences as $presence) {
             foreach ($presence->details as $detail) {
                 $student = $detail->student;
-                if ($student && ! $students->contains('id', $student->id)) {
-                    $students->push($student);
+                if ($student) {
+                    if ($studentClass && $student->studentClass?->id != $studentClass->id) {
+                        continue;
+                    }
+                    if (! $students->contains('id', $student->id)) {
+                        $students->push($student);
+                    }
                 }
             }
         }
@@ -82,17 +89,19 @@ class ReportController extends Controller
                     match ($detail->status) {
                         PresenceStatus::HADIR => $present++,
                         PresenceStatus::SAKIT => $sick++,
-                        PresenceStatus::IZIN => $permission++,
+                        PresenceStatus::IZIN  => $permission++,
                         PresenceStatus::ALPHA => $absent++,
                     };
                 }
             }
+            $percentage = $totalSessions > 0 ? round(($present / $totalSessions) * 100, 1) : 0;
+
             $stats[$student->id] = [
-                'present' => $present,
-                'sick' => $sick,
+                'present'    => $present,
+                'sick'       => $sick,
                 'permission' => $permission,
-                'absent' => $absent,
-                'total' => $present + $sick + $permission + $absent,
+                'absent'     => $absent,
+                'percentage' => $percentage,
             ];
         }
 
@@ -140,8 +149,13 @@ class ReportController extends Controller
         foreach ($presences as $presence) {
             foreach ($presence->details as $detail) {
                 $student = $detail->student;
-                if ($student && ! $students->contains('id', $student->id)) {
-                    $students->push($student);
+                if ($student) {
+                    if ($studentClass && $student->studentClass?->id != $studentClass->id) {
+                        continue;
+                    }
+                    if (! $students->contains('id', $student->id)) {
+                        $students->push($student);
+                    }
                 }
             }
         }
@@ -188,8 +202,8 @@ class ReportController extends Controller
                     $row[] = '-';
                 }
             }
-            $total = $present + $sick + $permission + $absent;
-            $percentage = $total > 0 ? round(($present / $total) * 100, 1) : 0;
+            $totalSessions = count($presences);
+            $percentage = $totalSessions > 0 ? round(($present / $totalSessions) * 100, 1) : 0;
             $row[] = $present;
             $row[] = $sick;
             $row[] = $permission;
@@ -203,7 +217,6 @@ class ReportController extends Controller
             $parts[] = preg_replace('/[^a-zA-Z0-9]/', '_', $studentClass->name);
         }
 
-        $year = $queryYear;
         $parts[] = $year;
         $parts[] = now()->format('YmdHis');
         $filename = implode('_', $parts).'.xlsx';
@@ -280,8 +293,8 @@ class ReportController extends Controller
                     $presenceDetails[] = '-';
                 }
             }
-            $total = $present + $sick + $permission + $absent;
-            $percentage = $total > 0 ? round(($present / $total) * 100, 1) : 0;
+            $totalSessions = count($presences);
+            $percentage = $totalSessions > 0 ? round(($present / $totalSessions) * 100, 1) : 0;
             $stats[$student->id] = [
                 'present' => $present,
                 'sick' => $sick,
