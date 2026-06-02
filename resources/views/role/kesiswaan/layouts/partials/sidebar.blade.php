@@ -14,7 +14,7 @@
 
             <!-- Tahun Ajaran -->
             <li>
-                <x-nav-link href="{{ route('academic-years.index') }}" :active="request()->routeIs(['academic-years.index', 'academic-years.create', 'academic-years.edit'])">
+                <x-nav-link href="{{ route('academic-years.index') }}" :active="request()->routeIs(['academic-years.index', 'academic-years.create', 'academic-years.edit', 'academic-years.close.form'])">
                     <i class="fa-solid fa-calendar text-md"></i>
                     <span class="ml-3">Tahun Ajaran</span>
                 </x-nav-link>

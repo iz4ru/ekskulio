@@ -36,7 +36,7 @@
     <div class="flex gap-4 my-4 justify-between">
         <div>
             <h1 class="text-xl lg:text-2xl font-semibold text-gray-600">Edit Presensi {{ $extracurricular->name }}</h1>
-            <p class="text-sm lg:text-base text-gray-400">Perbarui data presensi tanggal {{ $presence->date->format('d F Y') }}.</p>
+            <p class="text-sm lg:text-base text-gray-400">Perbarui data presensi tanggal {{ $presence->date->isoFormat('D MMMM Y') }}.</p>
         </div>
     </div>
 
@@ -57,7 +57,7 @@
                         </div>
                         <div>
                             <p class="text-sm text-gray-600">Tanggal Pertemuan</p>
-                            <p class="font-semibold text-gray-900">{{ $presence->date->format('d F Y') }}</p>
+                            <p class="font-semibold text-gray-900">{{ $presence->date->isoFormat('D MMMM Y') }}</p>
                         </div>
                         <div>
                             <p class="text-sm text-gray-600">Hari</p>

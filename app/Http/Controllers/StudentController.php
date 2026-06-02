@@ -31,13 +31,21 @@ class StudentController extends Controller
             })
             ->when($request->filled('class_id'), function ($q) use ($request) {
                 return $q->where('class_id', $request->class_id);
+            })
+            ->when($request->filled('search'), function ($q) use ($request) {
+                $search = strtolower($request->search);
+                $q->where(function ($q) use ($search) {
+                    $q->whereRaw('LOWER(name) LIKE ?', ["%{$search}%"])
+                    ->orWhereRaw('LOWER(id_number) LIKE ?', ["%{$search}%"]);
+                });
             });
 
         if (! $request->filled('include_graduated')) {
             $query->notGraduated();
         }
 
-        $x['students'] = $query->orderBy('name')->get();
+        $x['students'] = $query->orderBy('grade')->orderBy('name')->paginate(15)->withQueryString();
+
         $x['studentClasses'] = StudentClass::where('is_active', true)->orderBy('name')->get();
 
         return view('role.kesiswaan.contents.student.index', $x);

@@ -8,17 +8,25 @@ use App\Models\ExtracurricularMembership;
 use App\Models\Presence;
 use App\Models\PresenceDetail;
 use App\Models\Student;
-use App\Models\StudentClass;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 
 class PresenceController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $x['extracurriculars'] = Extracurricular::orderBy('name')->get();
-        $x['studentClasses'] = StudentClass::orderBy('name')->get();
+        $query = Extracurricular::query();
+
+        $query->when($request->filled('search'), function ($q) use ($request) {
+            $search = strtolower($request->search);
+            $q->where(function ($q) use ($search) {
+                $q->whereRaw('LOWER(name) LIKE ?', ["%{$search}%"])
+                  ->orWhereRaw('LOWER(code) LIKE ?', ["%{$search}%"]);
+            });
+        });
+
+        $x['extracurriculars'] = $query->orderBy('name')->paginate(10)->withQueryString();
 
         return view('role.kesiswaan.contents.presence.index', $x);
     }
@@ -40,9 +48,31 @@ class PresenceController extends Controller
             $query->where('academic_year_id', $selectedAY->id);
         }
 
-        $x['presences'] = $query->orderBy('date', 'desc')->get();
+        $query->when($request->filled('search'), function ($q) use ($request) {
+            $search = strtolower($request->search);
+            $q->where(function ($q) use ($search) {
+                $q->whereRaw('LOWER(date) LIKE ?', ["%{$search}%"]);
+            });
+        });
+
+        $x['presences'] = $query->orderBy('date', 'desc')->paginate(15)->withQueryString();
         $x['selectedAY'] = $selectedAY;
-        $x['academicYears'] = AcademicYear::orderBy('year', 'desc')->orderBy('semester', 'desc')->get();
+
+        $x['academicYears'] = AcademicYear::orderByRaw("
+            CASE 
+                WHEN is_active = 1 THEN 0
+                WHEN year > (SELECT year FROM academic_years WHERE is_active = 1 LIMIT 1) THEN 1
+                WHEN year = (SELECT year FROM academic_years WHERE is_active = 1 LIMIT 1) 
+                    AND semester = 'genap' 
+                    AND (SELECT semester FROM academic_years WHERE is_active = 1 LIMIT 1) = 'ganjil' THEN 2
+                ELSE 3
+            END,
+            year DESC,
+            CASE semester 
+                WHEN 'ganjil' THEN 1 
+                WHEN 'genap' THEN 2 
+            END
+        ")->get();
 
         return view('role.kesiswaan.contents.presence.show', $x);
     }

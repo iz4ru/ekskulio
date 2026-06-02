@@ -63,6 +63,33 @@
                             <p class="mt-1 text-xs text-gray-500">Contoh: Olahraga, Seni, atau Karya Ilmiah</p>
                         </div>
 
+                        {{-- Kode Kategori Ekstrakurikuler --}}
+                        <div class="sm:col-span-2">
+                            <label for="category_code" class="block mb-2 text-sm font-medium text-gray-900">
+                                Kode Kategori Ekstrakurikuler
+                                <span class="text-red-500">*</span>
+                            </label>
+                            <div class="relative">
+                                <input type="text" name="category_code" id="category_code"
+                                    placeholder="Akan diisi otomatis"
+                                    class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-md focus:ring-[#0083E9] focus:border-[#0083E9] block w-full p-2.5 pr-10"
+                                    value="{{ old('category_code') }}" required readonly>
+
+                                <!-- Loading spinner -->
+                                <div id="code-loader" class="hidden absolute inset-y-0 right-0 flex items-center pr-3">
+                                    <svg class="animate-spin h-4 w-4 text-[#0083E9]" xmlns="http://www.w3.org/2000/svg"
+                                        fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10"
+                                            stroke="currentColor" stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor"
+                                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                                        </path>
+                                    </svg>
+                                </div>
+                            </div>
+                            <p class="mt-1 text-xs text-gray-500">Kode akan terisi otomatis berdasarkan nama</p>
+                        </div>
+
                     </div>
 
                     <div class="flex justify-end mt-6">
@@ -76,5 +103,45 @@
         </section>
     </div>
 
+    @push('scripts')
+        <script>
+            const nameInput = document.getElementById('category_name');
+            const codeInput = document.getElementById('category_code');
+            const codeLoader = document.getElementById('code-loader');
+
+            // Generate Code Function
+            const generateExtracurricularCode = async () => {
+                const name = nameInput.value.trim();
+
+                if (!name) {
+                    codeInput.value = '';
+                    return;
+                }
+
+                codeLoader.classList.remove('hidden');
+                codeInput.classList.add('opacity-50');
+
+                try {
+                    const response = await fetch(`/extracurricular-category/generate-code/${encodeURIComponent(name)}`);
+                    const data = await response.json();
+                    codeInput.value = data.code;
+                } catch (error) {
+                    console.error('Error generating extracurricular category code:', error);
+                    codeInput.value = '';
+                } finally {
+                    codeLoader.classList.add('hidden');
+                    codeInput.classList.remove('opacity-50');
+                }
+            };
+
+            let debounceTimer;
+            nameInput.addEventListener('input', function() {
+                clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(() => {
+                    generateExtracurricularCode();
+                }, 500);
+            });
+        </script>
+    @endpush
 
 @endsection

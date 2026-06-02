@@ -78,7 +78,7 @@ class ExtracurricularSeeder extends Seeder
             ],
         ];
 
-        function makeThreeLetterCodeUnique($text, &$usedCodes)
+        function makeThreeLetterCodeUniqueForExtracurricular($text, &$usedExtracurricularCodes)
         {
             $clean = strtoupper(preg_replace('/[^A-Z ]/', '', $text));
             $words = array_values(array_filter(explode(' ', $clean)));
@@ -113,8 +113,8 @@ class ExtracurricularSeeder extends Seeder
                 if ($suffix !== '') {
                     $code = substr($code, 0, 2) . $suffix;
                 }
-                if (strlen($code) === 3 && !in_array($code, $usedCodes)) {
-                    $usedCodes[] = $code;
+                if (strlen($code) === 3 && !in_array($code, $usedExtracurricularCodes)) {
+                    $usedExtracurricularCodes[] = $code;
                     return $code;
                 }
             }
@@ -122,21 +122,21 @@ class ExtracurricularSeeder extends Seeder
             $i = 1;
             while (true) {
                 $code = substr($letters, 0, 2) . $i;
-                if (!in_array($code, $usedCodes)) {
-                    $usedCodes[] = $code;
+                if (!in_array($code, $usedExtracurricularCodes)) {
+                    $usedExtracurricularCodes[] = $code;
                     return $code;
                 }
                 $i++;
             }
         }
 
-        $usedCodes = [];
+        $usedExtracurricularCodes = [];
 
         foreach ($categories as $categoryId => $items) {
             foreach ($items as $name) {
                 Extracurricular::create([
                     'name' => $name,
-                    'code' => makeThreeLetterCodeUnique($name, $usedCodes),
+                    'code' => makeThreeLetterCodeUniqueForExtracurricular($name, $usedExtracurricularCodes),
                     'award' => null,
                     'category_id' => $categoryId,
                     'description' => $name . ' adalah kegiatan ekstrakurikuler.',

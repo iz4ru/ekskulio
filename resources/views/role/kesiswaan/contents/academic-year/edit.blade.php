@@ -79,7 +79,7 @@
                         </div>
 
                         {{-- Semester --}}
-                        <div class="w-full">
+                        <div class="sm:col-span-2">
                             <label class="block mb-2 text-sm font-medium text-gray-900">
                                 Semester
                                 <span class="text-red-500">*</span>
@@ -139,24 +139,6 @@
                     yearStart.value = parseInt(this.value) - 1;
                 }
             });
-
-            const statusToggle = document.getElementById('status-toggle');
-            const statusText = document.getElementById('status-text');
-
-            function updateStatusText() {
-                if (statusToggle.checked) {
-                    statusText.textContent = 'Diaktifkan';
-                    statusText.classList.add('text-[#0083E9]', 'font-semibold');
-                } else {
-                    statusText.textContent = 'Tidak Aktif';
-                    statusText.classList.remove('text-[#0083E9]', 'font-semibold');
-                }
-            }
-
-            // Initialize on page load
-            updateStatusText();
-
-            statusToggle.addEventListener('change', updateStatusText);
         </script>
     @endpush
 

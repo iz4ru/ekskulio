@@ -42,186 +42,149 @@
                 <i class="fa-solid fa-plus text-sm"></i>
                 <span>Tambah Tahun Ajaran</span>
             </a>
-            <a href="{{ route('academic-years.transition.form') }}"
+            <a href="{{ route('academic-years.close.form') }}"
                 class="inline-flex cursor-pointer items-center px-5 py-2.5 gap-2 text-sm font-medium text-center text-white bg-[#0083E9] rounded-md focus:ring-4 focus:ring-blue-300 hover:bg-[#DEECFF] hover:text-[#0083E9] active:scale-[0.98]
             transition-all duration-300 ease-out">
-                <i class="fa-solid fa-forward text-sm"></i>
-                <span>Transisi Tahun Ajaran</span>
+                <i class="fa-solid fa-lock text-sm"></i>
+                <span>Tutup Periode Saat Ini</span>
             </a>
+            @if (session('show_download_button'))
+                <a href="{{ route('academic-years.export-template') }}"
+                    class="cursor-pointer px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700 flex items-center gap-1">
+                    <i class="fa-solid fa-file-excel mr-2"></i> Download Template Excel
+                </a>
+            @endif
         </div>
 
         <div class="my-4 border-t-2 border-dashed border-gray-300 w-full"></div>
 
-        <div class="relative overflow-x-auto border-2 border-dashed border-gray-200 rounded-md p-4">
+        <div class="relative border-2 border-dashed border-gray-200 rounded-md p-4">
 
-            <table id="pagination-table" class="min-w-full text-sm text-left text-gray-600">
-                <thead>
-                    <tr>
-                        <th>
-                            <span class="flex items-center">
-                                No
-                                <svg class="w-4 h-4 ms-1" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
-                                    width="24" height="24" fill="none" viewBox="0 0 24 24">
-                                    <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
-                                        stroke-width="2" d="m8 15 4 4 4-4m0-6-4-4-4 4" />
-                                </svg>
-                            </span>
-                        </th>
-                        <th>
-                            <span class="flex items-center">
-                                Tahun Ajaran
-                                <svg class="w-4 h-4 ms-1" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
-                                    width="24" height="24" fill="none" viewBox="0 0 24 24">
-                                    <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
-                                        stroke-width="2" d="m8 15 4 4 4-4m0-6-4-4-4 4" />
-                                </svg>
-                            </span>
-                        </th>
-                        <th>
-                            <span class="flex items-center">
-                                Semester
-                                <svg class="w-4 h-4 ms-1" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
-                                    width="24" height="24" fill="none" viewBox="0 0 24 24">
-                                    <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
-                                        stroke-width="2" d="m8 15 4 4 4-4m0-6-4-4-4 4" />
-                                </svg>
-                            </span>
-                        </th>
-                        <th>
-                            <span class="flex items-center" data-sortable="false">
-                                Status
-                            </span>
-                        </th>
-                        <th data-sortable="false">
-                            <span class="flex items-center">
-                                Aksi
-                            </span>
-                        </th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach ($academicYears as $academicYear)
-                        <tr class="hover:bg-gray-100 transition-colors transition-duration-300">
-                            <td>{{ $loop->iteration }}</td>
-                            <td class="font-medium text-gray-800 whitespace-nowrap">
-                                {{ $academicYear->year }}
-                            </td>
-                            <td class="font-medium text-gray-800 whitespace-nowrap">
-                                {{ ucfirst($academicYear->semester) }}
-                            </td>
-                            <td>
-                                <form action="{{ route('academic-years.toggle', $academicYear) }}" method="POST"
-                                    id="toggle-form-{{ $academicYear->id }}">
-                                    @csrf
-                                    @method('PATCH')
-                                    <input type="hidden" name="password" id="password-{{ $academicYear->id }}"
-                                        value="">
-                                    <label class="relative inline-flex items-center cursor-pointer">
-                                        <input type="checkbox" class="sr-only peer toggle-checkbox"
-                                            data-id="{{ $academicYear->id }}"
-                                            data-name="{{ $academicYear->year }} - {{ ucfirst($academicYear->semester) }}"
-                                            {{ $academicYear->is_active ? 'checked' : '' }}>
-                                        <div
-                                            class="relative w-14 h-8 bg-gray-300 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-6 after:content-[''] after:absolute after:top-1 after:start-1 after:bg-white after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-[#0083E9]">
-                                        </div>
-                                    </label>
-                                </form>
-                            </td>
-                            <td>
-                                <div class="flex gap-3 items-center justify-start">
-                                    <a href="{{ route('academic-years.edit', $academicYear->id) }}"
-                                        class="text-[#0083E9] hover:underline font-medium focus:outline-none flex flex-col lg:flex-row items-center gap-1">
-                                        <i class="fa-solid fa-edit text-sm"></i>
-                                        <span class="text-sm">Edit</span>
-                                    </a>
-                                    <p class="font-bold text-gray-300">|</p>
-                                    <form action="{{ route('academic-years.destroy', $academicYear->id) }}" method="POST"
-                                        id="delete-form-{{ $academicYear->id }}" style="display: inline;">
-                                        @csrf
-                                        @method('DELETE')
-                                        <input type="hidden" name="password" id="delete-password-{{ $academicYear->id }}"
-                                            value="">
-                                        <button type="button"
-                                            class="delete-btn text-[#EF4444] hover:underline font-medium focus:outline-none cursor-pointer flex flex-col lg:flex-row items-center gap-1"
-                                            data-id="{{ $academicYear->id }}"
-                                            data-name="{{ $academicYear->year }} - {{ ucfirst($academicYear->semester) }}">
-                                            <i class="fa-solid fa-trash text-sm"></i>
-                                            <span class="text-sm">Hapus</span>
-                                        </button>
-                                    </form>
-                                </div>
-                            </td>
-                    @endforeach
-                </tbody>
-            </table>
+            {{-- Filter Section --}}
+            <form method="GET" class="mb-4 flex flex-wrap gap-3 items-end">
+                <div class="flex-1 min-w-[150px]">
+                    <label for="search" class="block text-xs font-medium text-gray-600 mb-1">Cari</label>
+                    <input type="text" name="search" id="search" value="{{ request('search') }}"
+                        placeholder="Cari Tahun Ajaran / Semester..."
+                        class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md">
+                </div>
+                <div class="flex gap-2">
+                    <button type="submit"
+                        class="px-4 py-2 text-sm font-medium text-white bg-gray-600 rounded-md hover:bg-gray-700 transition-all">
+                        Filter
+                    </button>
+                    <a href="{{ route('academic-years.index') }}"
+                        class="px-4 py-2 text-sm font-medium text-gray-600 border border-gray-300 rounded-md hover:bg-gray-100 transition-all">
+                        Reset
+                    </a>
+                </div>
+            </form>
+
+            <div class="overflow-x-auto rounded-lg border border-gray-200">
+                <table id="pagination-table" class="min-w-full text-sm text-left text-gray-600">
+                    <thead class="border-b border-gray-200">
+                        <tr>
+                            <th class="px-4 py-3 text-xs uppercase">No</th>
+                            <th class="px-4 py-3 text-xs uppercase">Tahun Ajaran</th>
+                            <th class="px-4 py-3 text-xs uppercase">Semester</th>
+                            <th class="px-4 py-3 text-xs uppercase">Status</th>
+                            <th class="px-4 py-3 text-xs uppercase">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach ($academicYears as $academicYear)
+                            <tr
+                                class="hover:bg-gray-100 transition-colors transition-duration-300 border-b border-gray-200">
+                                <td class="px-4 py-3 border-gray-200">{{ $loop->iteration }}</td>
+                                <td class="px-4 py-3 font-medium whitespace-nowrap border-gray-200">
+                                    {{ $academicYear->year }}
+                                </td>
+                                <td class="px-4 py-3 font-medium whitespace-nowrap border-gray-200">
+                                    {{ ucfirst($academicYear->semester) }}
+                                </td>
+                                <td class="px-4 py-3 font-medium whitespace-nowrap border-gray-200">
+                                    @php
+                                        $isActive = $academicYear->is_active;
+
+                                        // Tentukan apakah periode ini lebih baru dari yang sedang aktif
+                                        $isNewerThanActive = false;
+                                        if (!$isActive && $activeAY) {
+                                            if ($academicYear->year > $activeAY->year) {
+                                                $isNewerThanActive = true;
+                                            } elseif (
+                                                $academicYear->year === $activeAY->year &&
+                                                $academicYear->semester === 'genap' &&
+                                                $activeAY->semester === 'ganjil'
+                                            ) {
+                                                $isNewerThanActive = true;
+                                            }
+                                        }
+
+                                        // Jika tidak ada yang aktif sama sekali dan ini yang terbaru, anggap siap diaktifkan
+                                        if (!$isActive && !$activeAY) {
+                                            $isNewerThanActive = true;
+                                        }
+                                    @endphp
+
+                                    @if ($isActive)
+                                        <span
+                                            class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                            <i class="fa-solid fa-circle-check mr-1"></i> Aktif
+                                        </span>
+                                    @elseif ($isNewerThanActive)
+                                        <span
+                                            class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                            <i class="fa-solid fa-clock mr-1"></i> Siap Diaktifkan
+                                        </span>
+                                    @else
+                                        <span
+                                            class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                            <i class="fa-solid fa-archive mr-1"></i> Diarsipkan
+                                        </span>
+                                    @endif
+                                </td>
+                                <td class="px-4 py-3 font-medium whitespace-nowrap border-gray-200">
+                                    <div class="flex gap-3 items-center justify-start">
+                                        <a href="{{ route('academic-years.edit', $academicYear->id) }}"
+                                            class="text-[#0083E9] hover:underline font-medium focus:outline-none flex flex-col lg:flex-row items-center gap-1">
+                                            <i class="fa-solid fa-edit text-sm"></i>
+                                            <span class="text-sm">Edit</span>
+                                        </a>
+                                        <p class="font-bold text-gray-300">|</p>
+                                        <form action="{{ route('academic-years.destroy', $academicYear->id) }}"
+                                            method="POST" id="delete-form-{{ $academicYear->id }}"
+                                            style="display: inline;">
+                                            @csrf
+                                            @method('DELETE')
+                                            <input type="hidden" name="password"
+                                                id="delete-password-{{ $academicYear->id }}" value="">
+                                            <button type="button"
+                                                class="delete-btn text-[#EF4444] hover:underline font-medium focus:outline-none cursor-pointer flex flex-col lg:flex-row items-center gap-1"
+                                                data-id="{{ $academicYear->id }}"
+                                                data-name="{{ $academicYear->year }} - {{ ucfirst($academicYear->semester) }}">
+                                                <i class="fa-solid fa-trash text-sm"></i>
+                                                <span class="text-sm">Hapus</span>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+
+            @if ($academicYears->hasPages())
+                <div class="mt-4">
+                    {{ $academicYears->withQueryString()->links() }}
+                </div>
+            @endif
 
         </div>
-
     </div>
 
     @push('scripts')
         <script>
             document.addEventListener('DOMContentLoaded', function() {
-
-                let dataTable = null;
-
-                if (document.getElementById("pagination-table") && typeof simpleDatatables.DataTable !== 'undefined') {
-                    dataTable = new simpleDatatables.DataTable("#pagination-table", {
-                        paging: true,
-                        perPage: 5,
-                        perPageSelect: [5, 10, 15, 20, 25],
-                        sortable: true
-                    });
-                }
-
-                // ✅ GUNAKAN EVENT DELEGATION untuk toggle checkbox
-                document.addEventListener('change', async function(e) {
-                    if (e.target.classList.contains('toggle-checkbox')) {
-                        e.preventDefault();
-
-                        const academicYearId = e.target.getAttribute('data-id');
-                        const academicYearName = e.target.getAttribute('data-name');
-                        const status = e.target.checked ? 'mengaktifkan' : 'menonaktifkan';
-
-                        // Show sweetalert dengan password input
-                        const {
-                            value: password
-                        } = await Swal.fire({
-                            title: 'Konfirmasi Perubahan Status',
-                            html: `<p>Anda akan <strong>${status}</strong> tahun ajaran <strong>${academicYearName}</strong>.</p>
-                               <p class="mt-3 text-sm text-gray-600">Masukkan password untuk melanjutkan:</p>`,
-                            input: 'password',
-                            inputPlaceholder: 'Masukkan password Anda',
-                            inputAttributes: {
-                                autocapitalize: 'off',
-                                autocorrect: 'off'
-                            },
-                            showCancelButton: true,
-                            cancelButtonText: 'Batal',
-                            confirmButtonText: 'Konfirmasi',
-                            confirmButtonColor: '#0083E9',
-                            cancelButtonColor: '#EF4444',
-                            allowOutsideClick: false,
-                            allowEscapeKey: false,
-                            didOpen: (modal) => {
-                                modal.querySelector('input').focus();
-                            }
-                        });
-
-                        if (password) {
-                            // Set password ke hidden input
-                            document.getElementById('password-' + academicYearId).value = password;
-
-                            // Submit form
-                            document.getElementById('toggle-form-' + academicYearId).submit();
-                        } else {
-                            // Reset checkbox jika user cancel
-                            e.target.checked = !e.target.checked;
-                        }
-                    }
-                });
-
-                // ✅ GUNAKAN EVENT DELEGATION untuk delete button
                 document.addEventListener('click', async function(e) {
                     const deleteBtn = e.target.closest('.delete-btn');
 

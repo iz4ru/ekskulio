@@ -38,11 +38,38 @@ class ExtracurricularMembershipController extends Controller
             })
             ->when($request->filled('status'), function ($q) use ($request) {
                 return $q->where('status', $request->status);
+            })
+            ->when($request->filled('search'), function ($q) use ($request) {
+                $search = strtolower($request->search);
+                return $q->where(function ($q) use ($search) {
+                    $q->whereHas('student', function ($q) use ($search) {
+                        $q->whereRaw('LOWER(name) LIKE ?', ["%{$search}%"])
+                        ->orWhereRaw('LOWER(id_number) LIKE ?', ["%{$search}%"]);
+                    })
+                    ->orWhereHas('extracurricular', function ($q) use ($search) {
+                        $q->whereRaw('LOWER(name) LIKE ?', ["%{$search}%"]);
+                    });
+                });
             });
 
-        $memberships = $query->latest()->paginate(15);
+        $memberships = $query->latest()->paginate(15)->withQueryString();
         $extracurriculars = Extracurricular::where('is_active', true)->get();
-        $academicYears = AcademicYear::orderBy('year', 'desc')->orderBy('semester', 'desc')->get();
+
+        $academicYears = AcademicYear::orderByRaw("
+            CASE 
+                WHEN is_active = 1 THEN 0
+                WHEN year > (SELECT year FROM academic_years WHERE is_active = 1 LIMIT 1) THEN 1
+                WHEN year = (SELECT year FROM academic_years WHERE is_active = 1 LIMIT 1) 
+                    AND semester = 'genap' 
+                    AND (SELECT semester FROM academic_years WHERE is_active = 1 LIMIT 1) = 'ganjil' THEN 2
+                ELSE 3
+            END,
+            year DESC,
+            CASE semester 
+                WHEN 'ganjil' THEN 1 
+                WHEN 'genap' THEN 2 
+            END
+        ")->get();
 
         return view('role.kesiswaan.contents.membership.index', compact('memberships', 'extracurriculars', 'activeAY', 'selectedAY', 'academicYears'));
     }

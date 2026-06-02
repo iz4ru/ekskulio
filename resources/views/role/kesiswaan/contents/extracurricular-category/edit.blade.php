@@ -64,6 +64,21 @@
                             <p class="mt-1 text-xs text-gray-500">Contoh: Olahraga, Seni, atau Karya Ilmiah</p>
                         </div>
 
+                        {{-- Kode Kategori Ekstrakurikuler --}}
+                        <div class="sm:col-span-2">
+                            <label for="category_code" class="block mb-2 text-sm font-medium text-gray-900">
+                                Kode Kategori Ekstrakurikuler
+                                <span class="text-red-500">*</span>
+                            </label>
+                            <div class="relative">
+                                <input type="text" name="category_code" id="category_code"
+                                    placeholder="Edit kode ekstrakurikuler"
+                                    class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-md focus:ring-[#0083E9] focus:border-[#0083E9] block w-full p-2.5"
+                                    value="{{ old('category_code', $extracurricularCategory->code) }}" required>
+                            </div>
+                            <p class="mt-1 text-xs text-gray-500">Edit kode kategori ekstrakurikuler jika diperlukan</p>
+                        </div>
+
                     </div>
 
                     <div class="flex justify-end mt-6">

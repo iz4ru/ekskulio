@@ -11,9 +11,18 @@ use Maatwebsite\Excel\Facades\Excel;
 
 class StudentClassController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $x['classes'] = StudentClass::withCount('students')->orderBy('name')->get();
+        $query = StudentClass::withCount('students');
+
+        $query->when($request->filled('search'), function ($q) use ($request) {
+            $search = strtolower($request->search);
+            $q->where(function ($q) use ($search) {
+                $q->whereRaw('LOWER(name) LIKE ?', ["%{$search}%"]);
+            });
+        });
+
+        $x['classes'] = $query->orderBy('name')->paginate(15)->withQueryString();
 
         return view('role.kesiswaan.contents.student-class.index', $x);
     }

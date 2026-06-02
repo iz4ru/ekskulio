@@ -52,97 +52,98 @@
 
         <div class="my-4 border-t-2 border-dashed border-gray-300 w-full"></div>
 
-        <div class="relative overflow-x-auto border-2 border-dashed border-gray-200 rounded-md p-4">
+        <div class="relative border-2 border-dashed border-gray-200 rounded-md p-4">
 
-            <table id="pagination-table" class="min-w-full text-sm text-left text-gray-600">
-                <thead>
-                    <tr>
-                        <th>
-                            <span class="flex items-center">
-                                No
-                                <svg class="w-4 h-4 ms-1" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
-                                    width="24" height="24" fill="none" viewBox="0 0 24 24">
-                                    <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
-                                        stroke-width="2" d="m8 15 4 4 4-4m0-6-4-4-4 4" />
-                                </svg>
-                            </span>
-                        </th>
-                        <th>
-                            <span class="flex items-center">
-                                Nama Kategori
-                                <svg class="w-4 h-4 ms-1" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
-                                    width="24" height="24" fill="none" viewBox="0 0 24 24">
-                                    <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
-                                        stroke-width="2" d="m8 15 4 4 4-4m0-6-4-4-4 4" />
-                                </svg>
-                            </span>
-                        </th>
-                        <th>
-                            <span class="flex items-center">
-                                Jumlah Ekstrakurikuler
-                                <svg class="w-4 h-4 ms-1" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
-                                    width="24" height="24" fill="none" viewBox="0 0 24 24">
-                                    <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
-                                        stroke-width="2" d="m8 15 4 4 4-4m0-6-4-4-4 4" />
-                                </svg>
-                            </span>
-                        </th>
-                        <th data-sortable="false">
-                            <span class="flex items-center">
-                                Aksi
-                            </span>
-                        </th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach ($categories as $category)
-                        <tr class="hover:bg-gray-100 transition-colors transition-duration-300">
-                            <td>{{ $loop->iteration }}</td>
-                            <td class="font-medium text-gray-800 whitespace-nowrap">
-                                {{ $category->name }}
-                            </td>
-                            <td class="font-medium text-gray-800 whitespace-nowrap">
-                                <button onclick="toggleList(this)"
-                                    class="cursor-pointer text-[#0083E9] hover:underline font-medium focus:outline-none">
-                                    {{ count($category->extracurriculars) }} Ekstrakurikuler
-                                </button>
+            {{-- Filter Section --}}
+            <form method="GET" class="mb-4 flex flex-wrap gap-3 items-end">
+                <div class="flex-1 min-w-[150px]">
+                    <label for="search" class="block text-xs font-medium text-gray-600 mb-1">Cari</label>
+                    <input type="text" name="search" id="search" value="{{ request('search') }}"
+                        placeholder="Cari Nama Kategori / Kode Kategori / Nama Ekstrakurikuler..."
+                        class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md">
+                </div>
+                <div class="flex gap-2">
+                    <button type="submit"
+                        class="px-4 py-2 text-sm font-medium text-white bg-gray-600 rounded-md hover:bg-gray-700 transition-all">
+                        Filter
+                    </button>
+                    <a href="{{ route('extracurricular-category.index') }}"
+                        class="px-4 py-2 text-sm font-medium text-gray-600 border border-gray-300 rounded-md hover:bg-gray-100 transition-all">
+                        Reset
+                    </a>
+                </div>
+            </form>
 
-                                <ul
-                                    class="hidden opacity-0 max-h-0 overflow-hidden transition-all duration-300 ease-in-out">
-                                    @foreach ($category->extracurriculars as $extracurricular)
-                                        <li class="my-2">{{ $extracurricular->name }}</li>
-                                    @endforeach
-                                </ul>
-                            </td>
-                            <td>
-                                <div class="flex gap-3 items-center justify-start">
-                                    <a href="{{ route('extracurricular-category.edit', $category->id) }}"
-                                        class="text-[#0083E9] hover:underline font-medium focus:outline-none flex flex-col lg:flex-row items-center gap-1">
-                                        <i class="fa-solid fa-edit text-sm"></i>
-                                        <span class="text-sm">Edit</span>
-                                    </a>
-                                    <p class="font-bold text-gray-300">|</p>
-                                    <form action="{{ route('extracurricular-category.destroy', $category->id) }}"
-                                        method="POST" id="delete-form-{{ $category->id }}" style="display: inline;">
-                                        @csrf
-                                        @method('DELETE')
-                                        <input type="hidden" name="password" id="delete-password-{{ $category->id }}"
-                                            value="">
-                                        <button type="button"
-                                            class="delete-btn text-[#EF4444] hover:underline font-medium focus:outline-none cursor-pointer flex flex-col lg:flex-row items-center gap-1"
-                                            data-id="{{ $category->id }}" data-name="{{ $category->name }}">
-                                            <i class="fa-solid fa-trash text-sm"></i>
-                                            <span class="text-sm">Hapus</span>
-                                        </button>
-                                    </form>
-                                </div>
-                            </td>
-                    @endforeach
-                </tbody>
-            </table>
+            <div class="overflow-x-auto rounded-lg border border-gray-200">
+                <table id="pagination-table" class="min-w-full text-sm text-left text-gray-600">
+                    <thead class="border-b border-gray-200">
+                        <tr>
+                            <th class="px-4 py-3 text-xs uppercase">No</th>
+                            <th class="px-4 py-3 text-xs uppercase">Nama Kategori</th>
+                            <th class="px-4 py-3 text-xs uppercase">Kode Kategori</th>
+                            <th class="px-4 py-3 text-xs uppercase">Jumlah Ekstrakurikuler</th>
+                            <th class="px-4 py-3 text-xs uppercase">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach ($categories as $category)
+                            <tr
+                                class="hover:bg-gray-100 transition-colors transition-duration-300 border-b border-gray-200">
+                                <td class="px-4 py-3 border-gray-200">{{ $loop->iteration }}</td>
+                                <td class="px-4 py-3 font-medium whitespace-nowrap border-gray-200">
+                                    {{ $category->name }}
+                                </td>
+                                <td class="px-4 py-3 font-medium whitespace-nowrap border-gray-200">
+                                    {{ $category->code }}
+                                </td>
+                                <td class="px-4 py-3 font-medium whitespace-nowrap border-gray-200">
+                                    <button onclick="toggleList(this)"
+                                        class="cursor-pointer text-[#0083E9] hover:underline font-medium focus:outline-none">
+                                        {{ count($category->extracurriculars) }} Ekstrakurikuler
+                                    </button>
+
+                                    <ul
+                                        class="hidden opacity-0 max-h-0 overflow-hidden transition-all duration-300 ease-in-out">
+                                        @foreach ($category->extracurriculars as $extracurricular)
+                                            <li class="my-2">{{ $extracurricular->name }}</li>
+                                        @endforeach
+                                    </ul>
+                                </td>
+                                <td class="px-4 py-3 font-medium whitespace-nowrap border-gray-200">
+                                    <div class="flex gap-3 items-center justify-start">
+                                        <a href="{{ route('extracurricular-category.edit', $category->id) }}"
+                                            class="text-[#0083E9] hover:underline font-medium focus:outline-none flex flex-col lg:flex-row items-center gap-1">
+                                            <i class="fa-solid fa-edit text-sm"></i>
+                                            <span class="text-sm">Edit</span>
+                                        </a>
+                                        <p class="font-bold text-gray-300">|</p>
+                                        <form action="{{ route('extracurricular-category.destroy', $category->id) }}"
+                                            method="POST" id="delete-form-{{ $category->id }}" style="display: inline;">
+                                            @csrf
+                                            @method('DELETE')
+                                            <input type="hidden" name="password" id="delete-password-{{ $category->id }}"
+                                                value="">
+                                            <button type="button"
+                                                class="delete-btn text-[#EF4444] hover:underline font-medium focus:outline-none cursor-pointer flex flex-col lg:flex-row items-center gap-1"
+                                                data-id="{{ $category->id }}" data-name="{{ $category->name }}">
+                                                <i class="fa-solid fa-trash text-sm"></i>
+                                                <span class="text-sm">Hapus</span>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+
+            @if ($categories->hasPages())
+                <div class="mt-4">
+                    {{ $categories->withQueryString()->links() }}
+                </div>
+            @endif
 
         </div>
-
     </div>
 
     @push('scripts')
@@ -167,17 +168,6 @@
             }
 
             document.addEventListener('DOMContentLoaded', function() {
-
-                let dataTable = null;
-
-                if (document.getElementById("pagination-table") && typeof simpleDatatables.DataTable !== 'undefined') {
-                    dataTable = new simpleDatatables.DataTable("#pagination-table", {
-                        paging: true,
-                        perPage: 10,
-                        perPageSelect: [10, 15, 20, 25],
-                        sortable: true
-                    });
-                }
 
                 document.addEventListener('click', async function(e) {
                     // Check if clicked element or its parent is delete button

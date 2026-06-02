@@ -2,25 +2,54 @@
 
 namespace App\Http\Controllers;
 
+use App\Exports\StudentTemplateExport;
 use App\Models\AcademicYear;
-use App\Services\GradeProgressionService;
-use App\Services\MembershipTransitionService;
+use App\Services\AcademicYearClosureService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Maatwebsite\Excel\Facades\Excel;
 
 class AcademicYearController extends Controller
 {
     public function __construct(
-        private GradeProgressionService $gradeService,
-        private MembershipTransitionService $membershipService
+        private AcademicYearClosureService $closureService
     ) {}
 
-    public function index()
+    public function index(Request $request)
     {
-        $x['academicYears'] = AcademicYear::orderBy('year', 'desc')->orderBy('semester', 'desc')->get();
+        $activeAY = AcademicYear::getActiveYear();
 
-        return view('role.kesiswaan.contents.academic-year.index', $x);
+        $query = AcademicYear::query();
+
+        if ($request->filled('search')) {
+            $search = strtolower($request->search);
+            
+            $query->where(function ($q) use ($search) {
+                $q->whereRaw('LOWER(year) LIKE ?', ["%{$search}%"])
+                ->orWhereRaw('LOWER(semester) LIKE ?', ["%{$search}%"]);
+            });
+        }
+
+        $query->orderByRaw("
+            CASE 
+                WHEN is_active = 1 THEN 0
+                WHEN year > (SELECT year FROM academic_years WHERE is_active = 1 LIMIT 1) THEN 1
+                WHEN year = (SELECT year FROM academic_years WHERE is_active = 1 LIMIT 1) 
+                    AND semester = 'genap' 
+                    AND (SELECT semester FROM academic_years WHERE is_active = 1 LIMIT 1) = 'ganjil' THEN 2
+                ELSE 3
+            END,
+            year DESC,
+            CASE semester 
+                WHEN 'ganjil' THEN 1 
+                WHEN 'genap' THEN 2 
+            END
+        ");
+
+        $academicYears = $query->paginate(15)->withQueryString();
+
+        return view('role.kesiswaan.contents.academic-year.index', compact('academicYears','activeAY'));
     }
 
     public function create()
@@ -166,109 +195,95 @@ class AcademicYearController extends Controller
         return redirect()->route('academic-years.index')->with('success', 'Tahun ajaran berhasil dihapus!');
     }
 
-    public function toggleActive(AcademicYear $academicYear, Request $request)
-    {
-        if (! Hash::check($request->password, Auth::user()->password)) {
-            return redirect()
-                ->route('academic-years.index')
-                ->withErrors(['error' => 'Password yang anda masukkan salah!']);
-        }
-
-        AcademicYear::where('id', '!=', $academicYear->id)
-            ->where('is_active', true)
-            ->update(['is_active' => false]);
-
-        $academicYear->update(['is_active' => ! $academicYear->is_active]);
-
-        $status = $academicYear->is_active ? 'diaktifkan' : 'dinonaktifkan';
-
-        return redirect()
-            ->route('academic-years.index')
-            ->with('success', "Tahun ajaran {$academicYear->year} - ".ucfirst($academicYear->semester)." berhasil {$status}!");
-    }
-
-    public function transitionForm(Request $request)
+    public function closeForm()
     {
         $currentAY = AcademicYear::getActiveYear();
-        if (! $currentAY) {
+        
+        if (!$currentAY) {
             return redirect()->route('academic-years.index')
-                ->withErrors(['error' => 'Tidak ada tahun ajaran aktif.']);
+                ->withErrors(['error' => 'Tidak ada tahun ajaran yang aktif saat ini.']);
         }
 
-        // ✅ Hapus logika getNextYear(), biarkan admin pilih dari dropdown
-        $targetAY = $request->filled('new_academic_year_id')
-            ? AcademicYear::find($request->new_academic_year_id)
-            : null;
-
-        $previewYear = $targetAY ?? $currentAY;
-        $preview = $this->gradeService->getTransitionPreview($currentAY, $previewYear);
-
-        // ✅ Filter available years: hanya yang valid secara kronologis
-        $availableYears = AcademicYear::where('is_active', false)
-            ->where(function ($q) use ($currentAY) {
-                $q->where('year', '>', $currentAY->year)
-                    ->orWhere(function ($sub) use ($currentAY) {
+        $availableTargets = AcademicYear::where('id', '!=', $currentAY->id)
+            ->where('is_active', false)
+            ->where(function ($query) use ($currentAY) {
+                
+                $query->where('year', '>', $currentAY->year);
+                
+                if ($currentAY->semester === 'ganjil') {
+                    $query->orWhere(function ($sub) use ($currentAY) {
                         $sub->where('year', $currentAY->year)
-                            ->where('semester', '!=', $currentAY->semester);
+                            ->where('semester', 'genap');
                     });
+                }
+                
             })
-            ->orderBy('year')->orderBy('semester')
+            ->orderBy('year', 'asc')
+            ->orderByRaw("CASE WHEN semester = 'ganjil' THEN 1 ELSE 2 END ASC") 
             ->get();
 
-        return view('role.kesiswaan.contents.academic-year.transition', [
+        if ($availableTargets->isEmpty()) {
+            return redirect()->route('academic-years.index')
+                ->withErrors(['error' => 'Belum ada periode masa depan yang tersedia. Silakan buat Tahun Ajaran / Semester baru terlebih dahulu di menu Tambah.']);
+        }
+
+        return view('role.kesiswaan.contents.academic-year.close', [
             'currentYear' => $currentAY,
-            'targetYear' => $targetAY,
-            'studentsReady' => $preview['students'],
-            'membershipPreview' => $preview['memberships'],
-            'previewInfo' => $preview,
-            'availableYears' => $availableYears,
+            'availableTargets' => $availableTargets,
         ]);
     }
 
-    public function processTransition(Request $request)
+    public function processClosure(Request $request)
     {
-        $currentAY = AcademicYear::getActiveYear();
-        $newAY = AcademicYear::findOrFail($request->new_academic_year_id);
-
         $request->validate([
             'password' => 'required',
-            'new_academic_year_id' => 'required|exists:academic_years,id',
+            'target_id' => 'required|exists:academic_years,id',
         ], [
-            'password.required' => 'Password wajib diisi untuk melanjutkan transisi',
-            'new_academic_year_id.required' => 'Tahun ajaran tujuan wajib dipilih',
+            'password.required' => 'Password wajib diisi untuk melanjutkan.',
+            'target_id.required' => 'Tahun ajaran tujuan wajib dipilih.',
+            'target_id.exists' => 'Tahun ajaran tujuan tidak valid.',
         ]);
 
-        if (! Hash::check($request->password, Auth::user()->password)) {
+        if (!Hash::check($request->password, Auth::user()->password)) {
             return back()->withErrors(['password' => 'Password yang Anda masukkan salah!']);
         }
 
-        if (! $currentAY) {
-            return back()->withErrors(['error' => 'Tidak ada tahun ajaran aktif saat ini.']);
+        $currentAY = AcademicYear::getActiveYear();
+        $targetAY = AcademicYear::findOrFail($request->target_id);
+
+        if (!$currentAY) {
+            return back()->withErrors(['error' => 'Tidak ada tahun ajaran aktif.']);
         }
 
-        if ($newAY->is_active) {
-            return back()->withErrors(['new_academic_year_id' => 'Tahun ajaran tujuan sudah aktif.']);
+        if ($targetAY->is_active) {
+            return back()->withErrors(['target_id' => 'Tahun ajaran tujuan sudah aktif.']);
         }
 
-        if ($newAY->year <= $currentAY->year && $newAY->semester === $currentAY->semester) {
-            return back()->withErrors(['new_academic_year_id' => 'Tahun ajaran tujuan harus lebih baru.']);
+        // Validasi kronologis
+        $currentYearStart = (int) explode('/', $currentAY->year)[0];
+        $targetYearStart = (int) explode('/', $targetAY->year)[0];
+
+        if ($targetYearStart < $currentYearStart) {
+            return back()->withErrors(['target_id' => 'Tahun ajaran tujuan tidak boleh lebih lama.']);
         }
 
-        $results = $this->gradeService->processYearTransition($currentAY, $newAY);
-
-        if (! empty($results['errors'])) {
-            return redirect()
-                ->route('academic-years.index')
-                ->withErrors(['error' => 'Terjadi kesalahan: '.implode(', ', $results['errors'])]);
+        if ($targetAY->year === $currentAY->year && $targetAY->semester === $currentAY->semester) {
+            return back()->withErrors(['target_id' => 'Tahun ajaran tujuan tidak boleh sama dengan yang aktif.']);
         }
 
-        $message = match ($results['type']) {
-            'semester' => "Ganti semester berhasil! {$results['memberships_migrated']} keanggotaan dipindahkan.",
-            default => "Transisi berhasil! {$results['promoted']} siswa dinaikkan kelas, {$results['graduated']} siswa kelas XII (lulus), {$results['memberships_migrated']} keanggotaan dipindahkan.",
-        };
+        $results = $this->closureService->close($currentAY, $targetAY);
 
-        return redirect()
-            ->route('academic-years.index')
-            ->with('success', $message);
+        $msg = $results['type'] === 'academic_year'
+            ? "Tahun ajaran berhasil ditutup. {$results['graduated_students']} siswa lulus, {$results['promoted_students']} naik kelas, {$results['closed_memberships']} keanggotaan diarsipkan."
+            : "Semester berhasil ditutup. {$results['closed_memberships']} keanggotaan diarsipkan. Grade siswa tetap.";
+
+        return redirect()->route('academic-years.index')
+            ->with('success', $msg . ' Silakan download template Excel untuk periode baru.')
+            ->with('show_download_button', true);
+    }
+
+    public function exportTemplate()
+    {
+        return Excel::download(new StudentTemplateExport(), 'template_siswa_tahun_ajaran_baru.xlsx');
     }
 }

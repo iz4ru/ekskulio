@@ -2,23 +2,37 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Student;
-use Illuminate\Http\Request;
+use App\Exports\ExtracurricularExport;
+use App\Imports\ExtracurricularImport;
 use App\Models\Extracurricular;
+use App\Models\ExtracurricularCategory;
+use App\Models\ExtracurricularSchedule;
 use App\Models\ExtracurricularUser;
+use App\Models\Student;
 use Illuminate\Foundation\Auth\User;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Maatwebsite\Excel\Facades\Excel;
-use App\Imports\ExtracurricularImport;
-use App\Models\ExtracurricularCategory;
-use App\Models\ExtracurricularSchedule;
 
 class ExtracurricularController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $x['extracurriculars'] = Extracurricular::with('category')->orderBy('name')->get();
+        $query = Extracurricular::with('category');
+
+        $query->when($request->filled('search'), function ($q) use ($request) {
+            $search = strtolower($request->search);
+            $q->where(function ($q) use ($search) {
+                $q->whereRaw('LOWER(name) LIKE ?', ["%{$search}%"])
+                ->orWhereRaw('LOWER(code) LIKE ?', ["%{$search}%"])
+                ->orWhereHas('category', function ($q) use ($search) {
+                    $q->whereRaw('LOWER(name) LIKE ?', ["%{$search}%"]);
+                });
+            });
+        });
+
+        $x['extracurriculars'] = $query->orderBy('name')->paginate(15)->withQueryString();
 
         return view('role.kesiswaan.contents.extracurricular.index', $x);
     }
@@ -342,5 +356,10 @@ class ExtracurricularController extends Controller
         return redirect()
             ->route('extracurricular.index')
             ->with('success', "Ekstrakurikuler {$extracurricular->name} berhasil {$status}!");
+    }
+
+    public function export()
+    {
+        return Excel::download(new ExtracurricularExport(), 'data-ekstrakurikuler.xlsx');
     }
 }

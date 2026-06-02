@@ -48,123 +48,144 @@
 
         <div class="my-4 border-t-2 border-dashed border-gray-300 w-full"></div>
 
-        <form method="GET" action="{{ route('scores.export') }}" class="mb-4 flex flex-wrap gap-3 items-end">
-            <div class="flex-1 min-w-[200px]">
-                <label for="academic_year_id" class="block text-xs font-medium text-gray-600 mb-1">Tahun Ajaran</label>
-                <select name="academic_year_id" id="academic_year_id" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md">
-                    <option value="">Semua</option>
-                    @foreach ($academicYears as $ay)
-                        <option value="{{ $ay->id }}" {{ $selectedAY?->id == $ay->id ? 'selected' : '' }}>
-                            {{ $ay->display_name }}
-                        </option>
-                    @endforeach
-                </select>
-            </div>
-            <div class="flex-1 min-w-[200px]">
-                <label for="extracurricular_id" class="block text-xs font-medium text-gray-600 mb-1">Ekstrakurikuler</label>
-                <select name="extracurricular_id" id="extracurricular_id" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md">
-                    <option value="">Semua</option>
-                    @foreach ($extracurriculars as $ekskul)
-                        <option value="{{ $ekskul->id }}">{{ $ekskul->name }}</option>
-                    @endforeach
-                </select>
-            </div>
-            <div class="flex-1 min-w-[150px]">
-                <label for="class_id" class="block text-xs font-medium text-gray-600 mb-1">Kelas</label>
-                <select name="class_id" id="class_id" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md">
-                    <option value="">Semua Kelas</option>
-                    @foreach($studentClasses ?? [] as $class)
-                        <option value="{{ $class->id }}">{{ $class->name }}</option>
-                    @endforeach
-                </select>
-            </div>
-            <div class="flex gap-2">
-                <button type="submit" formaction="{{ route('scores.index') }}" class="px-4 py-2 text-sm font-medium text-white bg-gray-600 rounded-md hover:bg-gray-700">Filter</button>
-                <a href="{{ route('scores.index') }}" class="px-4 py-2 text-sm font-medium text-gray-600 border border-gray-300 rounded-md hover:bg-gray-100">Reset</a>
-                <div x-data="{ open: false }" class="relative inline-block">
-    
-                    <button 
-                        type="button"
-                        @click="open = !open"
-                        class="cursor-pointer px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700 flex items-center gap-1">
-                        <i class="fa-solid fa-download"></i> Export
-                    </button>
+        <div class="relative border-2 border-dashed border-gray-200 rounded-md p-4">
 
-                    <div 
-                        x-show="open"
-                        @click.outside="open = false"
-                        x-transition
-                        class="absolute right-0 mt-2 w-40 bg-white border border-gray-200 rounded-md shadow-lg z-10">
+            <form method="GET" action="{{ route('scores.export') }}" class="mb-4 flex flex-wrap gap-3 items-end">
+                <div class="flex-1 min-w-[200px]">
+                    <label for="academic_year_id" class="block text-xs font-medium text-gray-600 mb-1">Tahun Ajaran</label>
+                    <select name="academic_year_id" id="academic_year_id"
+                        class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md">
+                        <option value="">Semua</option>
+                        @foreach ($academicYears as $ay)
+                            <option value="{{ $ay->id }}" {{ $selectedAY?->id == $ay->id ? 'selected' : '' }}>
+                                {{ $ay->display_name }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="flex-1 min-w-[200px]">
+                    <label for="extracurricular_id"
+                        class="block text-xs font-medium text-gray-600 mb-1">Ekstrakurikuler</label>
+                    <select name="extracurricular_id" id="extracurricular_id"
+                        class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md">
+                        <option value="">Semua</option>
+                        @foreach ($extracurriculars as $ekskul)
+                            <option value="{{ $ekskul->id }}">{{ $ekskul->name }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="flex-1 min-w-[150px]">
+                    <label for="class_id" class="block text-xs font-medium text-gray-600 mb-1">Kelas</label>
+                    <select name="class_id" id="class_id"
+                        class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md">
+                        <option value="">Semua Kelas</option>
+                        @foreach ($studentClasses ?? [] as $class)
+                            <option value="{{ $class->id }}">{{ $class->name }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="flex-1 min-w-[150px]">
+                    <label for="search" class="block text-xs font-medium text-gray-600 mb-1">Cari</label>
+                    <input type="text" name="search" id="search" value="{{ request('search') }}"
+                        placeholder="Cari Nama Siswa / NIS / Nama Ekstrakurikuler..."
+                        class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md">
+                </div>
+                <div class="flex gap-2">
+                    <button type="submit" formaction="{{ route('scores.index') }}"
+                        class="px-4 py-2 text-sm font-medium text-white bg-gray-600 rounded-md hover:bg-gray-700">Filter</button>
+                    <a href="{{ route('scores.index') }}"
+                        class="px-4 py-2 text-sm font-medium text-gray-600 border border-gray-300 rounded-md hover:bg-gray-100">Reset</a>
+                    <div x-data="{ open: false }" class="relative inline-block">
 
-                        <button type="submit" name="type" value="excel"
-                            class="cursor-pointer w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
-                            <i class="fa-solid fa-file-excel mr-2"></i> Excel
+                        <button type="button" @click="open = !open"
+                            class="cursor-pointer px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700 flex items-center gap-1">
+                            <i class="fa-solid fa-download"></i> Export
                         </button>
 
-                        <button type="submit" name="type" value="pdf"
-                            class="cursor-pointer w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
-                            <i class="fa-solid fa-file-pdf mr-2"></i> PDF
-                        </button>
+                        <div x-show="open" @click.outside="open = false" x-transition
+                            class="absolute right-0 mt-2 w-40 bg-white border border-gray-200 rounded-md shadow-lg z-10">
 
+                            <button type="submit" name="type" value="excel"
+                                class="cursor-pointer w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                <i class="fa-solid fa-file-excel mr-2"></i> Excel
+                            </button>
+
+                            <button type="submit" name="type" value="pdf"
+                                class="cursor-pointer w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                <i class="fa-solid fa-file-pdf mr-2"></i> PDF
+                            </button>
+
+                        </div>
                     </div>
                 </div>
-            </div>
-        </form>
+            </form>
 
-        <div class="relative overflow-x-auto border-2 border-dashed border-gray-200 rounded-md p-4">
-
-            <table id="pagination-table" class="min-w-full text-sm text-left text-gray-600">
-                <thead>
-                    <tr>
-                        <th class="px-4 py-3">No</th>
-                        <th class="px-4 py-3">NIS</th>
-                        <th class="px-4 py-3">Nama Siswa</th>
-                        <th class="px-4 py-3">Kelas</th>
-                        <th class="px-4 py-3">Ekstrakurikuler</th>
-                        <th class="px-4 py-3">Tahun Ajaran</th>
-                        <th class="px-4 py-3 text-center">Nilai</th>
-                        <th class="px-4 py-3 text-center">Predikat</th>
-                        <th class="px-4 py-3">
-                            <span class="flex items-center w-32">Catatan</span>
-                        </th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @forelse ($scores as $score)
-                        <tr class="hover:bg-gray-100 transition-colors transition-duration-300">
-                            <td class="px-4 py-3">{{ $loop->iteration }}</td>
-                            <td class="px-4 py-3 font-medium whitespace-nowrap">{{ $score->membership->student->id_number ?? '-' }}</td>
-                            <td class="px-4 py-3 font-medium whitespace-nowrap">{{ $score->membership->student->name ?? '-' }}</td>
-                            <td class="px-4 py-3 whitespace-nowrap">{{ $score->membership->student->studentClass?->name ?? '-' }}</td>
-                            <td class="px-4 py-3 whitespace-nowrap">{{ $score->membership->extracurricular->name ?? '-' }}</td>
-                            <td class="px-4 py-3 whitespace-nowrap">{{ $score->academicYear->display_name ?? '-' }}</td>
-                            <td class="px-4 py-3 text-center font-bold whitespace-nowrap">{{ $score->score ?? '-' }}</td>
-                            <td class="px-4 py-3 text-center">
-                                @if($score->predicate)
-                                    <span class="px-2 py-1 text-xs font-medium rounded-md 
-                                        @if($score->predicate === 'A') bg-green-100 text-green-700
+            <div class="overflow-x-auto rounded-lg border border-gray-200">
+                <table id="pagination-table" class="min-w-full text-sm text-left text-gray-600">
+                    <thead class="border-b border-gray-200">
+                        <tr>
+                            <th class="px-4 py-3 text-xs uppercase">No</th>
+                            <th class="px-4 py-3 text-xs uppercase">NIS</th>
+                            <th class="px-4 py-3 text-xs uppercase">Nama Siswa</th>
+                            <th class="px-4 py-3 text-xs uppercase">Kelas</th>
+                            <th class="px-4 py-3 text-xs uppercase">Ekstrakurikuler</th>
+                            <th class="px-4 py-3 text-xs uppercase">Tahun Ajaran</th>
+                            <th class="px-4 py-3 text-xs uppercase">Nilai</th>
+                            <th class="px-4 py-3 text-xs uppercase">Predikat</th>
+                            <th class="px-4 py-3 text-xs uppercase">
+                                <span class="flex items-center w-32">Catatan</span>
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse ($scores as $score)
+                            <tr
+                                class="hover:bg-gray-100 transition-colors transition-duration-300 border-b border-gray-200">
+                                <td class="px-4 py-3 border-gray-200">{{ $loop->iteration }}</td>
+                                <td class="px-4 py-3 font-medium whitespace-nowrap border-gray-200">
+                                    {{ $score->membership->student->id_number ?? '-' }}</td>
+                                <td class="px-4 py-3 font-medium whitespace-nowrap border-gray-200">
+                                    {{ $score->membership->student->name ?? '-' }}</td>
+                                <td class="px-4 py-3 font-medium whitespace-nowrap border-gray-200">
+                                    {{ $score->membership->student->studentClass?->name ?? '-' }}</td>
+                                <td class="px-4 py-3 font-medium whitespace-nowrap border-gray-200">
+                                    {{ $score->membership->extracurricular->name ?? '-' }}</td>
+                                <td class="px-4 py-3 font-medium whitespace-nowrap border-gray-200">
+                                    {{ $score->academicYear->display_name ?? '-' }}
+                                </td>
+                                <td class="px-4 py-3 font-bold whitespace-nowrap border-gray-200">
+                                    {{ $score->score ?? '-' }}
+                                </td>
+                                <td class="px-4 py-3 font-medium whitespace-nowrap border-gray-200">
+                                    @if ($score->predicate)
+                                        <span
+                                            class="px-2 py-1 text-xs font-medium rounded-md 
+                                        @if ($score->predicate === 'A') bg-green-100 text-green-700
                                         @elseif($score->predicate === 'B') bg-blue-100 text-blue-700
                                         @elseif($score->predicate === 'C') bg-yellow-100 text-yellow-700
-                                        @else bg-red-100 text-red-700
-                                        @endif">
-                                        {{ $score->predicate }}
-                                    </span>
-                                @else
-                                    -
-                                @endif
-                            </td>
-                            <td class="px-4 py-3 text-sm text-gray-500 max-w-xs truncate" title="{{ $score->notes ?? '' }}">{{ $score->notes ?? '-' }}</td>
-                        </tr>
-                    @empty
-                        <tr>
-                            <td colspan="9" class="text-center py-8 text-gray-500">
-                                <i class="fa-solid fa-clipboard text-4xl mb-2"></i>
-                                <p>Belum ada data penilaian.</p>
-                            </td>
-                        </tr>
-                    @endforelse
-                </tbody>
-            </table>
+                                        @else bg-red-100 text-red-700 @endif">
+                                            {{ $score->predicate }}
+                                        </span>
+                                    @else
+                                        -
+                                    @endif
+                                </td>
+                                <td class="px-4 py-3 font-medium whitespace-nowrap border-gray-200 text-gray-500 max-w-xs truncate"
+                                    title="{{ $score->notes ?? '' }}">{{ $score->notes ?? '-' }}</td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="9" class="text-center py-8 text-gray-500">
+                                    <div class="flex flex-col items-center justify-center gap-2 py-4">
+                                        <i class="fa-solid fa-clipboard text-4xl mb-2"></i>
+                                        <p>Belum ada data penilaian.</p>
+                                    </div>
+                                </td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
 
             @if ($scores->hasPages())
                 <div class="mt-4">
@@ -174,22 +195,5 @@
 
         </div>
     </div>
-
-    @push('scripts')
-        <script>
-            document.addEventListener('DOMContentLoaded', function() {
-                let dataTable = null;
-
-                if (document.getElementById("pagination-table") && typeof simpleDatatables.DataTable !== 'undefined') {
-                    dataTable = new simpleDatatables.DataTable("#pagination-table", {
-                        paging: true,
-                        perPage: 10,
-                        perPageSelect: [10, 15, 20, 25],
-                        sortable: true
-                    });
-                }
-            });
-        </script>
-    @endpush
 
 @endsection

@@ -14,6 +14,7 @@ class ExtracurricularCategory extends Model
     protected $fillable = [
         'id',
         'name',
+        'code',
     ];
 
     public function extracurriculars()

@@ -50,188 +50,132 @@
             <span>Tambahkan Data Presensi</span>
         </a>
 
-        <form method="GET" class="my-4 flex flex-wrap gap-3 items-end">
-            <div class="flex-1 min-w-[200px]">
-                <label for="academic_year_id" class="block text-xs font-medium text-gray-600 mb-1">Tahun Ajaran</label>
-                <select name="academic_year_id" id="academic_year_id"
-                    class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md">
-                    <option value="">Semua Tahun Ajaran</option>
-                    @foreach ($academicYears as $ay)
-                        <option value="{{ $ay->id }}" {{ $selectedAY?->id == $ay->id ? 'selected' : '' }}>
-                            {{ $ay->display_name }}
-                        </option>
-                    @endforeach
-                </select>
-            </div>
-            <button type="submit"
-                class="px-4 py-2 text-sm font-medium text-white bg-gray-600 rounded-md hover:bg-gray-700 transition-all">
-                Filter
-            </button>
-            @if(request('academic_year_id'))
-                <a href="{{ route('presence.show', $extracurricular->id) }}"
-                    class="px-4 py-2 text-sm font-medium text-gray-600 border border-gray-300 rounded-md hover:bg-gray-100 transition-all">
-                    Reset
-                </a>
-            @endif
-        </form>
-
         <div class="my-4 border-t-2 border-dashed border-gray-300 w-full"></div>
 
-        <div class="relative overflow-x-auto border-2 border-dashed border-gray-200 rounded-md p-4">
+        <div class="relative border-2 border-dashed border-gray-200 rounded-md p-4">
 
-            <table id="pagination-table" class="min-w-full text-sm text-left text-gray-600">
-                <thead>
-                    <tr>
-                        <th>
-                            <span class="flex items-center">
-                                No
-                                <svg class="w-4 h-4 ms-1" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
-                                    width="24" height="24" fill="none" viewBox="0 0 24 24">
-                                    <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
-                                        stroke-width="2" d="m8 15 4 4 4-4m0-6-4-4-4 4" />
-                                </svg>
-                            </span>
-                        </th>
-                        <th>
-                            <span class="flex items-center">
-                                Tahun Ajaran
-                                <svg class="w-4 h-4 ms-1" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
-                                    width="24" height="24" fill="none" viewBox="0 0 24 24">
-                                    <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
-                                        stroke-width="2" d="m8 15 4 4 4-4m0-6-4-4-4 4" />
-                                </svg>
-                            </span>
-                        </th>
-                        <th>
-                            <span class="flex items-center">
-                                Tanggal
-                                <svg class="w-4 h-4 ms-1" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
-                                    width="24" height="24" fill="none" viewBox="0 0 24 24">
-                                    <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
-                                        stroke-width="2" d="m8 15 4 4 4-4m0-6-4-4-4 4" />
-                                </svg>
-                            </span>
-                        </th>
-                        <th>
-                            <span class="flex items-center">
-                                Hari
-                                <svg class="w-4 h-4 ms-1" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
-                                    width="24" height="24" fill="none" viewBox="0 0 24 24">
-                                    <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
-                                        stroke-width="2" d="m8 15 4 4 4-4m0-6-4-4-4 4" />
-                                </svg>
-                            </span>
-                        </th>
-                        <th>
-                            <span class="flex items-center">
-                                Hadir
-                                <svg class="w-4 h-4 ms-1" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
-                                    width="24" height="24" fill="none" viewBox="0 0 24 24">
-                                    <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
-                                        stroke-width="2" d="m8 15 4 4 4-4m0-6-4-4-4 4" />
-                                </svg>
-                            </span>
-                        </th>
-                        <th>
-                            <span class="flex items-center">
-                                Izin
-                                <svg class="w-4 h-4 ms-1" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
-                                    width="24" height="24" fill="none" viewBox="0 0 24 24">
-                                    <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
-                                        stroke-width="2" d="m8 15 4 4 4-4m0-6-4-4-4 4" />
-                                </svg>
-                            </span>
-                        </th>
-                        <th>
-                            <span class="flex items-center">
-                                Sakit
-                                <svg class="w-4 h-4 ms-1" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
-                                    width="24" height="24" fill="none" viewBox="0 0 24 24">
-                                    <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
-                                        stroke-width="2" d="m8 15 4 4 4-4m0-6-4-4-4 4" />
-                                </svg>
-                            </span>
-                        </th>
-                        <th>
-                            <span class="flex items-center">
-                                Alfa
-                                <svg class="w-4 h-4 ms-1" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
-                                    width="24" height="24" fill="none" viewBox="0 0 24 24">
-                                    <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
-                                        stroke-width="2" d="m8 15 4 4 4-4m0-6-4-4-4 4" />
-                                </svg>
-                            </span>
-                        </th>
-                        <th data-sortable="false">
-                            <span class="flex items-center">
-                                Aksi
-                            </span>
-                        </th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach ($presences as $presence)
-                        <tr class="hover:bg-gray-100 transition-colors transition-duration-300">
-                            <td>{{ $loop->iteration }}</td>
-                            <td class="font-medium text-gray-800 whitespace-nowrap">
-                                {{ $presence->academicYear->year }} - {{ ucfirst($presence->academicYear->semester) }}
-                            </td>
-                            <td class="font-medium text-gray-800 whitespace-nowrap">
-                                {{ $presence->date->format('d M Y') }}
-                            </td>
-                            <td class="font-medium text-gray-800 whitespace-nowrap">
-                                {{ $presence->day }}
-                            </td>
-                            <td class="font-medium">
-                                <div
-                                    class="flex items-center gap-2 text-green-600 bg-green-50 px-2 py-1 rounded-md w-max">
-                                    {{ $presence->present_count }}
-                                </div>
-                            </td>
-                            <td class="font-medium">
-                                <div
-                                    class="flex items-center gap-2 text-yellow-600 bg-yellow-50 px-2 py-1 rounded-md w-max">
-                                    {{ $presence->sick_count }}
-                                </div>
-                            </td>
-                            <td class="font-medium">
-                                <div class="flex items-center gap-2 text-blue-600 bg-blue-50 px-2 py-1 rounded-md w-max">
-                                    {{ $presence->permission_count }}
-                                </div>
-                            </td>
-                            <td class="font-medium">
-                                <div class="flex items-center gap-2 text-red-600 bg-red-50 px-2 py-1 rounded-md w-max">
-                                    {{ $presence->absent_count }}
-                                </div>
-                            </td>
-                            <td>
-                                <div class="flex gap-3 items-center justify-start">
-                                    <a href="{{ route('presence.edit', $presence->id) }}"
-                                        class="text-[#0083E9] hover:underline font-medium focus:outline-none flex flex-col lg:flex-row items-center gap-1">
-                                        <i class="fa-solid fa-edit text-sm"></i>
-                                        <span class="text-sm">Edit</span>
-                                    </a>
-                                    <p class="font-bold text-gray-300">|</p>
-                                    <form action="{{ route('presence.destroy', $presence->id) }}" method="POST"
-                                        id="delete-form-{{ $presence->id }}" style="display: inline;">
-                                        @csrf
-                                        @method('DELETE')
-                                        <input type="hidden" name="password" id="delete-password-{{ $presence->id }}"
-                                            value="">
-                                        <button type="button"
-                                            class="delete-btn text-[#EF4444] hover:underline font-medium focus:outline-none cursor-pointer flex flex-col lg:flex-row items-center gap-1"
-                                            data-id="{{ $presence->id }}"
-                                            data-name="{{ $presence->date->format('d M Y') }}">
-                                            <i class="fa-solid fa-trash text-sm"></i>
-                                            <span class="text-sm">Hapus</span>
-                                        </button>
-                                    </form>
-                                </div>
-                            </td>
+            <form method="GET" class="my-4 flex flex-wrap gap-3 items-end">
+                <div class="flex-1 min-w-[150px]">
+                    <label for="academic_year_id" class="block text-xs font-medium text-gray-600 mb-1">Tahun Ajaran</label>
+                    <select name="academic_year_id" id="academic_year_id"
+                        class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md">
+                        <option value="">Semua Tahun Ajaran</option>
+                        @foreach ($academicYears as $ay)
+                            <option value="{{ $ay->id }}" {{ $selectedAY?->id == $ay->id ? 'selected' : '' }}>
+                                {{ $ay->display_name }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="flex-1 min-w-[150px]">
+                    <label for="search" class="block text-xs font-medium text-gray-600 mb-1">Cari</label>
+                    <input type="text" name="search" id="search" value="{{ request('search') }}"
+                        placeholder="Cari Tanggal (cont. 2026-01-01)..."
+                        class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md">
+                </div>
+                <button type="submit"
+                    class="px-4 py-2 text-sm font-medium text-white bg-gray-600 rounded-md hover:bg-gray-700 transition-all">
+                    Filter
+                </button>
+                @if (request('academic_year_id'))
+                    <a href="{{ route('presence.show', $extracurricular->id) }}"
+                        class="px-4 py-2 text-sm font-medium text-gray-600 border border-gray-300 rounded-md hover:bg-gray-100 transition-all">
+                        Reset
+                    </a>
+                @endif
+            </form>
+
+            <div class="overflow-x-auto rounded-lg border border-gray-200">
+                <table id="pagination-table" class="min-w-full text-sm text-left text-gray-600">
+                    <thead class="border-b border-gray-200">
+                        <tr>
+                            <th class="px-4 py-3 text-xs uppercase">No</th>
+                            <th class="px-4 py-3 text-xs uppercase">Tahun Ajaran</th>
+                            <th class="px-4 py-3 text-xs uppercase">Tanggal</th>
+                            <th class="px-4 py-3 text-xs uppercase">Hari</th>
+                            <th class="px-4 py-3 text-xs uppercase">Hadir</th>
+                            <th class="px-4 py-3 text-xs uppercase">Izin</th>
+                            <th class="px-4 py-3 text-xs uppercase">Sakit</th>
+                            <th class="px-4 py-3 text-xs uppercase">Alfa</th>
+                            <th class="px-4 py-3 text-xs uppercase">Aksi</th>
                         </tr>
-                    @endforeach
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        @foreach ($presences as $presence)
+                            <tr class="hover:bg-gray-100 transition-colors transition-duration-300 border-b border-gray-200">
+                                <td class="px-4 py-3 border-gray-200">{{ $loop->iteration }}</td>
+                                <td class="px-4 py-3 font-medium whitespace-nowrap border-gray-200">
+                                    <span
+                                        class="inline-block mt-2 px-3 py-1 text-xs font-medium bg-blue-100 text-blue-700 rounded-full">
+                                        <i class="fa-solid fa-calendar mr-1"></i>
+                                        {{ $presence->academicYear->year }} -
+                                        {{ ucfirst($presence->academicYear->semester) }}
+                                    </span>
+                                </td>
+                                <td class="px-4 py-3 font-medium whitespace-nowrap border-gray-200">
+                                    {{ $presence->date->isoFormat('D MMMM Y') }}
+                                </td>
+                                <td class="px-4 py-3 font-medium whitespace-nowrap border-gray-200">
+                                    {{ $presence->day }}
+                                </td>
+                                <td class="px-4 py-3 font-medium whitespace-nowrap border-gray-200">
+                                    <div
+                                        class="flex items-center gap-2 text-green-600 bg-green-50 px-2 py-1 rounded-md w-max">
+                                        {{ $presence->present_count }}
+                                    </div>
+                                </td>
+                                <td class="px-4 py-3 font-medium whitespace-nowrap border-gray-200">
+                                    <div
+                                        class="flex items-center gap-2 text-yellow-600 bg-yellow-50 px-2 py-1 rounded-md w-max">
+                                        {{ $presence->sick_count }}
+                                    </div>
+                                </td>
+                                <td class="px-4 py-3 font-medium whitespace-nowrap border-gray-200">
+                                    <div
+                                        class="flex items-center gap-2 text-blue-600 bg-blue-50 px-2 py-1 rounded-md w-max">
+                                        {{ $presence->permission_count }}
+                                    </div>
+                                </td>
+                                <td class="px-4 py-3 font-medium whitespace-nowrap border-gray-200">
+                                    <div class="flex items-center gap-2 text-red-600 bg-red-50 px-2 py-1 rounded-md w-max">
+                                        {{ $presence->absent_count }}
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="flex gap-3 items-center justify-start">
+                                        <a href="{{ route('presence.edit', $presence->id) }}"
+                                            class="text-[#0083E9] hover:underline font-medium focus:outline-none flex flex-col lg:flex-row items-center gap-1">
+                                            <i class="fa-solid fa-edit text-sm"></i>
+                                            <span class="text-sm">Edit</span>
+                                        </a>
+                                        <p class="font-bold text-gray-300">|</p>
+                                        <form action="{{ route('presence.destroy', $presence->id) }}" method="POST"
+                                            id="delete-form-{{ $presence->id }}" style="display: inline;">
+                                            @csrf
+                                            @method('DELETE')
+                                            <input type="hidden" name="password"
+                                                id="delete-password-{{ $presence->id }}" value="">
+                                            <button type="button"
+                                                class="delete-btn text-[#EF4444] hover:underline font-medium focus:outline-none cursor-pointer flex flex-col lg:flex-row items-center gap-1"
+                                                data-id="{{ $presence->id }}"
+                                                data-name="{{ $presence->date->format('d M Y') }}">
+                                                <i class="fa-solid fa-trash text-sm"></i>
+                                                <span class="text-sm">Hapus</span>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+
+            @if ($presences->hasPages())
+                <div class="mt-4">
+                    {{ $presences->withQueryString()->links() }}
+                </div>
+            @endif
 
         </div>
     </div>
@@ -239,17 +183,6 @@
     @push('scripts')
         <script>
             document.addEventListener('DOMContentLoaded', function() {
-
-                let dataTable = null;
-
-                if (document.getElementById("pagination-table") && typeof simpleDatatables.DataTable !== 'undefined') {
-                    dataTable = new simpleDatatables.DataTable("#pagination-table", {
-                        paging: true,
-                        perPage: 10,
-                        perPageSelect: [10, 15, 20, 25],
-                        sortable: true
-                    });
-                }
 
                 document.addEventListener('click', async function(e) {
                     const deleteBtn = e.target.closest('.delete-btn');

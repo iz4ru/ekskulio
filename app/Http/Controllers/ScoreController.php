@@ -27,11 +27,42 @@ class ScoreController extends Controller
 
         $query = ScoreSummary::with(['membership.student.studentClass', 'membership.extracurricular', 'academicYear'])
             ->when($selectedAY, fn ($q) => $q->where('academic_year_id', $selectedAY->id))
-            ->when($request->filled('extracurricular_id'), fn ($q) => $q->whereHas('membership', fn ($m) => $m->where('extracurricular_id', $request->extracurricular_id)));
+            ->when($request->filled('extracurricular_id'), fn ($q) => $q->whereHas('membership', fn ($m) => $m->where('extracurricular_id', $request->extracurricular_id)))
+            ->when($request->filled('search'), function ($q) use ($request) {
+                $search = strtolower($request->search);
+                return $q->where(function ($q) use ($search) {
+                    $q->whereHas('membership', function ($m) use ($search) {
+                        $m->whereHas('student', function ($s) use ($search) {
+                            $s->whereRaw('LOWER(name) LIKE ?', ["%{$search}%"])
+                              ->orWhereRaw('LOWER(id_number) LIKE ?', ["%{$search}%"]);
+                        })
+                        ->orWhereHas('extracurricular', function ($e) use ($search) {
+                            $e->whereRaw('LOWER(name) LIKE ?', ["%{$search}%"]);
+                        });
+                    });
+                });
+            });
 
-        $scores = $query->latest()->paginate(15);
+        $scores = $query->latest()->paginate(15)->withQueryString();
+        
         $extracurriculars = Extracurricular::where('is_active', true)->get();
-        $academicYears = AcademicYear::orderBy('year', 'desc')->orderBy('semester', 'desc')->get();
+        
+        $academicYears = AcademicYear::orderByRaw("
+            CASE 
+                WHEN is_active = 1 THEN 0
+                WHEN year > (SELECT year FROM academic_years WHERE is_active = 1 LIMIT 1) THEN 1
+                WHEN year = (SELECT year FROM academic_years WHERE is_active = 1 LIMIT 1) 
+                    AND semester = 'genap' 
+                    AND (SELECT semester FROM academic_years WHERE is_active = 1 LIMIT 1) = 'ganjil' THEN 2
+                ELSE 3
+            END,
+            year DESC,
+            CASE semester 
+                WHEN 'ganjil' THEN 1 
+                WHEN 'genap' THEN 2 
+            END
+        ")->get();
+
         $studentClasses = StudentClass::where('is_active', true)->orderBy('name')->get();
 
         return view('role.kesiswaan.contents.score.index', compact('scores', 'extracurriculars', 'activeAY', 'selectedAY', 'academicYears', 'studentClasses'));
@@ -47,26 +78,51 @@ class ScoreController extends Controller
         }
 
         $extracurriculars = Extracurricular::where('is_active', true)->get();
+
         $studentClasses = StudentClass::where('is_active', true)->orderBy('name')->get();
-        $academicYears = AcademicYear::orderBy('year', 'desc')->orderBy('semester', 'desc')->get();
+
+        $academicYears = AcademicYear::orderByRaw("
+            CASE 
+                WHEN is_active = 1 THEN 0
+                WHEN year > (SELECT year FROM academic_years WHERE is_active = 1 LIMIT 1) THEN 1
+                WHEN year = (SELECT year FROM academic_years WHERE is_active = 1 LIMIT 1) 
+                    AND semester = 'genap' 
+                    AND (SELECT semester FROM academic_years WHERE is_active = 1 LIMIT 1) = 'ganjil' THEN 2
+                ELSE 3
+            END,
+            year DESC,
+            CASE semester 
+                WHEN 'ganjil' THEN 1 
+                WHEN 'genap' THEN 2 
+            END
+        ")->get();
 
         return view('role.kesiswaan.contents.score.input', compact('extracurriculars', 'activeAY', 'studentClasses', 'academicYears'));
     }
 
-    public function getStudentsForScore(Request $request)
+    public function getStudents(Request $request)
     {
         $extracurricularId = $request->extracurricular_id;
         $academicYearId = $request->academic_year_id;
+        $classId = $request->class_id; // TAMBAHAN
 
         if (! $extracurricularId || ! $academicYearId) {
             return response()->json([]);
         }
 
-        $memberships = ExtracurricularMembership::with(['student.studentClass'])
+        $query = ExtracurricularMembership::with(['student.studentClass'])
             ->where('extracurricular_id', $extracurricularId)
             ->where('academic_year_id', $academicYearId)
-            ->where('status', MembershipStatus::AKTIF->value)
-            ->get();
+            ->where('status', MembershipStatus::AKTIF->value);
+
+        // TAMBAHAN: Filter by class_id jika ada
+        if ($classId) {
+            $query->whereHas('student', function ($q) use ($classId) {
+                $q->where('class_id', $classId);
+            });
+        }
+
+        $memberships = $query->get();
 
         $existingScores = ScoreSummary::where('academic_year_id', $academicYearId)
             ->whereIn('membership_id', $memberships->pluck('id'))

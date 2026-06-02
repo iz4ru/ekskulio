@@ -59,7 +59,7 @@
                                     Download Template
                                 </label>
                                 <div class="flex items-center bg-gray-50 border border-gray-300 rounded-md p-2.5">
-                                    <a href="{{ asset('templates/import-kategori-ekstrakurikuler.xlsx') }}" download
+                                    <a href="{{ asset('templates/import-ekstrakurikuler.xlsx') }}" download
                                         class="px-5 py-2 text-sm font-medium text-white bg-green-600 rounded-md cursor-pointer hover:bg-green-700 transition-all duration-300 ease-out inline-flex items-center gap-2">
                                         <i class="fa-solid fa-download text-sm"></i>
                                         Download Template

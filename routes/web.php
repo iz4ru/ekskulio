@@ -44,9 +44,9 @@ Route::middleware(['auth', 'check.role:kesiswaan'])->group(function () {
             Route::get('/{academicYear}/edit', [AcademicYearController::class, 'edit'])->name('edit');
             Route::put('/{academicYear}', [AcademicYearController::class, 'update'])->name('update');
             Route::delete('/{academicYear}', [AcademicYearController::class, 'destroy'])->name('destroy');
-            Route::patch('/{academicYear}/toggle', [AcademicYearController::class, 'toggleActive'])->name('toggle');
-            Route::get('/transition', [AcademicYearController::class, 'transitionForm'])->name('transition.form');
-            Route::post('/transition', [AcademicYearController::class, 'processTransition'])->name('transition.process');
+            Route::get('/close', [AcademicYearController::class, 'closeForm'])->name('close.form');
+            Route::post('/close', [AcademicYearController::class, 'processClosure'])->name('close.process');
+            Route::get('/export-template', [AcademicYearController::class, 'exportTemplate'])->name('export-template');
         });
 
     Route::prefix('extracurricular-category')
@@ -60,6 +60,7 @@ Route::middleware(['auth', 'check.role:kesiswaan'])->group(function () {
             Route::get('/{extracurricularCategory}/edit', [ExtracurricularCategoryController::class, 'edit'])->name('edit');
             Route::put('/{extracurricularCategory}', [ExtracurricularCategoryController::class, 'update'])->name('update');
             Route::delete('/{extracurricularCategory}', [ExtracurricularCategoryController::class, 'destroy'])->name('destroy');
+            Route::get('/generate-code/{name}', [ExtracurricularCategoryController::class, 'generateCode'])->name('generateCode');
         });
 
     Route::prefix('extracurricular')
@@ -75,6 +76,7 @@ Route::middleware(['auth', 'check.role:kesiswaan'])->group(function () {
             Route::put('/{extracurricular}', [ExtracurricularController::class, 'update'])->name('update');
             Route::delete('/{extracurricular}', [ExtracurricularController::class, 'destroy'])->name('destroy');
             Route::patch('/{extracurricular}/toggle', [ExtracurricularController::class, 'toggleActive'])->name('toggle');
+            Route::get('/export', [ExtracurricularController::class, 'export'])->name('export');
             Route::get('/generate-code/{name}', [ExtracurricularController::class, 'generateCode'])->name('generateCode');
         });
 
@@ -111,7 +113,7 @@ Route::middleware(['auth', 'check.role:kesiswaan'])->group(function () {
             Route::get('/', [ScoreController::class, 'index'])->name('index');
             Route::get('/input', [ScoreController::class, 'input'])->name('input');
             Route::post('/', [ScoreController::class, 'store'])->name('store');
-            Route::get('/get-students', [ScoreController::class, 'getStudentsForScore'])->name('get-students');
+            Route::get('/get-students', [ScoreController::class, 'getStudents'])->name('get-students');
             Route::get('/export', [ScoreController::class, 'export'])->name('export');
         });
 

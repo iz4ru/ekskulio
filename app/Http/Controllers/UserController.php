@@ -11,9 +11,20 @@ use Illuminate\Support\Facades\Hash;
 
 class UserController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $x['users'] = User::where('role', 'admin')->orWhere('role', 'pembina')->orderBy('role', 'desc')->get();
+        $query = User::whereIn('role', ['admin', 'pembina']);
+
+        $query->when($request->filled('search'), function ($q) use ($request) {
+            $search = strtolower($request->search);
+            $q->where(function ($q) use ($search) {
+                $q->whereRaw('LOWER(name) LIKE ?', ["%{$search}%"])
+                ->orWhereRaw('LOWER(username) LIKE ?', ["%{$search}%"])
+                ->orWhereRaw('LOWER(email) LIKE ?', ["%{$search}%"]);
+            });
+        });
+
+        $x['users'] = $query->orderBy('role', 'desc')->orderBy('name', 'asc')->paginate(15)->withQueryString();
 
         return view('role.kesiswaan.contents.user-management.index', $x);
     }

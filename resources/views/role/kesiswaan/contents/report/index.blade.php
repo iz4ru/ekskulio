@@ -56,7 +56,7 @@
                     <div>
                         <label class="block text-xs font-medium text-gray-600 mb-1">Ekstrakurikuler <span class="text-red-500">*</span></label>
                         <select name="extracurricular_id" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md" required>
-                            <option value="">-- Pilih --</option>
+                            <option value="">-- Pilih Terlebih Dahulu --</option>
                             @foreach($extracurriculars as $ekskul)
                                 <option value="{{ $ekskul->id }}">{{ $ekskul->name }}</option>
                             @endforeach
@@ -84,7 +84,10 @@
                         <select name="class_id" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md">
                             <option value="">Semua Kelas</option>
                             @foreach($studentClasses as $class)
-                                <option value="{{ $class->id }}">{{ $class->name }}</option>
+                                <option value="{{ $class->id }}"
+                                    {{ request('class_id') == $class->id ? 'selected' : '' }}>
+                                    {{ $class->name }}
+                                </option>
                             @endforeach
                         </select>
                     </div>

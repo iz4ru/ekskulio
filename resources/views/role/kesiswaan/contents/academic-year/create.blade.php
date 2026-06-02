@@ -79,7 +79,7 @@
                         </div>
 
                         {{-- Semester --}}
-                        <div class="w-full">
+                        <div class="sm:col-span-2">
                             <label for="semester" class="block mb-2 text-sm font-medium text-gray-900">
                                 Semester
                                 <span class="text-red-500">*</span>
@@ -108,25 +108,6 @@
                                 </div>
                             </div>
                         </div>
-
-                        {{-- Status --}}
-                        <div class="w-full">
-                            <label for="status-toggle" class="block mb-2 text-sm font-medium text-gray-900">Status</label>
-                            <div class="mt-4">
-                                <label class="inline-flex items-center cursor-pointer">
-                                    <input type="checkbox" name="status" id="status-toggle" class="sr-only peer"
-                                        value="1" {{ old('status') ? 'checked' : '' }}>
-                                    <div
-                                        class="relative w-14 h-8 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-6 after:content-[''] after:absolute after:top-1 after:start-1 after:bg-white after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-[#0083E9]">
-                                    </div>
-                                    <span class="ms-3 text-sm font-medium text-gray-900" id="status-text">Tidak
-                                        Aktif</span>
-                                </label>
-                                <p class="mt-1 text-xs text-gray-500">Mengaktifkan status akan menonaktifkan tahun ajaran
-                                    lain</p>
-                            </div>
-                        </div>
-
                     </div>
 
                     <div class="flex justify-end mt-6">
@@ -155,69 +136,6 @@
             yearEnd.addEventListener('input', function() {
                 if (this.value && this.value.length === 4) {
                     yearStart.value = parseInt(this.value) - 1;
-                }
-            });
-
-            const statusToggle = document.getElementById('status-toggle');
-            const statusText = document.getElementById('status-text');
-
-            function updateStatusText() {
-                if (statusToggle.checked) {
-                    statusText.textContent = 'Diaktifkan';
-                    statusText.classList.add('text-[#0083E9]', 'font-semibold');
-                } else {
-                    statusText.textContent = 'Tidak Aktif';
-                    statusText.classList.remove('text-[#0083E9]', 'font-semibold');
-                }
-            }
-
-            updateStatusText();
-
-            statusToggle.addEventListener('change', updateStatusText);
-
-            // Handle form submit dengan sweetalert jika status aktif
-            const academicYearForm = document.getElementById('academic-year-form');
-            academicYearForm.addEventListener('submit', async function(e) {
-                e.preventDefault();
-
-                // Jika status toggle aktif, minta password
-                if (statusToggle.checked) {
-                    const yearStartValue = yearStart.value;
-                    const yearEndValue = yearEnd.value;
-                    const academicYearName = yearStartValue && yearEndValue ?
-                        `${yearStartValue}/${yearEndValue}` : 'tahun ajaran baru';
-
-                    const {
-                        value: password
-                    } = await Swal.fire({
-                        title: 'Konfirmasi Perubahan Status',
-                        html: `<p>Anda akan <strong>mengaktifkan</strong> tahun ajaran <strong>${academicYearName}</strong>.</p>
-                               <p class="mt-3 text-sm text-gray-600">Masukkan password untuk melanjutkan:</p>`,
-                        input: 'password',
-                        inputPlaceholder: 'Masukkan password Anda',
-                        inputAttributes: {
-                            autocapitalize: 'off',
-                            autocorrect: 'off'
-                        },
-                        showCancelButton: true,
-                        cancelButtonText: 'Batal',
-                        confirmButtonText: 'Konfirmasi',
-                        confirmButtonColor: '#0083E9',
-                        cancelButtonColor: '#EF4444',
-                        allowOutsideClick: false,
-                        allowEscapeKey: false,
-                        didOpen: (modal) => {
-                            modal.querySelector('input').focus();
-                        }
-                    });
-
-                    if (password) {
-                        document.getElementById('password-input').value = password;
-                        this.submit();
-                    }
-                } else {
-                    // Jika toggle off, langsung submit tanpa password
-                    this.submit();
                 }
             });
         </script>
