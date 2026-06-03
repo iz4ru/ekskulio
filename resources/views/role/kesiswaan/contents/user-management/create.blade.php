@@ -117,90 +117,91 @@
                             <p class="mt-1 text-xs text-gray-500">Contoh: 08123456789</p>
                         </div>
 
-                        {{-- Role - RADIO BUTTON --}}
-                        <div class="sm:col-span-2 relative">
-                            <label class="block mb-2 text-sm font-medium text-gray-900">
-                                Role <span class="text-red-500">*</span>
-                            </label>
-
-                            <div class="grid grid-cols-2 gap-4 w-full">
-                                {{-- Admin --}}
-                                <label
-                                    class="flex items-center p-3 bg-gray-50 border-2 border-gray-200 rounded-md hover:border-[#0083E9] hover:bg-blue-50 transition-all duration-200 cursor-pointer group">
-                                    <input type="radio" name="role" value="admin"
-                                        class="w-4 h-4 text-[#0083E9] bg-gray-100 border-gray-300 focus:ring-[#0083E9] focus:ring-2 mr-3 group-hover:scale-110 transition-transform duration-200"
-                                        {{ old('role') == 'admin' ? 'checked' : '' }} required>
-                                    <div>
-                                        <div class="font-medium text-gray-900 group-hover:text-[#0083E9]">Admin</div>
-                                        <div class="text-xs text-gray-500">Kelola seluruh sistem</div>
-                                    </div>
+                        <div x-data="{ role: '{{ old('role') }}' }" class="sm:col-span-2 flex flex-col gap-4 sm:gap-6">
+                            {{-- Role - RADIO BUTTON --}}
+                            <div class="sm:col-span-2 relative">
+                                <label class="block mb-2 text-sm font-medium text-gray-900">
+                                    Role <span class="text-red-500">*</span>
                                 </label>
 
-                                {{-- Pembina --}}
-                                <label
-                                    class="flex items-center p-3 bg-gray-50 border-2 border-gray-200 rounded-md hover:border-[#0083E9] hover:bg-blue-50 transition-all duration-200 cursor-pointer group">
-                                    <input type="radio" name="role" value="pembina"
-                                        class="w-4 h-4 text-[#0083E9] bg-gray-100 border-gray-300 focus:ring-[#0083E9] focus:ring-2 mr-3 group-hover:scale-110 transition-transform duration-200"
-                                        {{ old('role') == 'pembina' ? 'checked' : '' }} required>
-                                    <div>
-                                        <div class="font-medium text-gray-900 group-hover:text-[#0083E9]">Pembina</div>
-                                        <div class="text-xs text-gray-500">Kelola ekstrakurikuler</div>
-                                    </div>
-                                </label>
-                            </div>
+                                <div class="grid grid-cols-2 gap-4 w-full">
+                                    {{-- Admin --}}
+                                    <label
+                                        class="flex items-center p-3 bg-gray-50 border-2 border-gray-200 rounded-md hover:border-[#0083E9] hover:bg-blue-50 transition-all duration-200 cursor-pointer group">
+                                        <input type="radio" name="role" value="admin" x-model="role"
+                                            class="w-4 h-4 text-[#0083E9] bg-gray-100 border-gray-300 focus:ring-[#0083E9] focus:ring-2 mr-3 group-hover:scale-110 transition-transform duration-200"
+                                            {{ old('role') == 'admin' ? 'checked' : '' }} required>
+                                        <div>
+                                            <div class="font-medium text-gray-900 group-hover:text-[#0083E9]">Admin</div>
+                                            <div class="text-xs text-gray-500">Kelola seluruh sistem</div>
+                                        </div>
+                                    </label>
 
-                            @error('role')
-                                <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
-                            @enderror
-
-                            <p class="mt-2 text-xs text-gray-500">Pilih role pengguna</p>
-                        </div>
-
-
-                        {{-- Ekstrakurikuler --}}
-                        <div class="sm:col-span-2 relative">
-                            <label for="user_extracurricular" class="block mb-2 text-sm font-medium text-gray-900">
-                                Ekstrakurikuler
-                            </label>
-
-                            <div class="relative">
-                                <input type="text" name="user_extracurricular" id="user_extracurricular"
-                                    placeholder="Pilih atau ketik ekstrakurikuler" autocomplete="off"
-                                    class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-md focus:ring-[#0083E9] focus:border-[#0083E9] block w-full p-2.5 pr-10"
-                                    value="{{ old('user_extracurricular') }}">
-
-                                <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                                    <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor"
-                                        viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="m19 9-7 7-7-7" />
-                                    </svg>
+                                    {{-- Pembina --}}
+                                    <label
+                                        class="flex items-center p-3 bg-gray-50 border-2 border-gray-200 rounded-md hover:border-[#0083E9] hover:bg-blue-50 transition-all duration-200 cursor-pointer group">
+                                        <input type="radio" name="role" value="pembina" x-model="role"
+                                            class="w-4 h-4 text-[#0083E9] bg-gray-100 border-gray-300 focus:ring-[#0083E9] focus:ring-2 mr-3 group-hover:scale-110 transition-transform duration-200"
+                                            {{ old('role') == 'pembina' ? 'checked' : '' }} required>
+                                        <div>
+                                            <div class="font-medium text-gray-900 group-hover:text-[#0083E9]">Pembina</div>
+                                            <div class="text-xs text-gray-500">Kelola ekstrakurikuler</div>
+                                        </div>
+                                    </label>
                                 </div>
-                            </div>
 
-                            <div id="extracurricular-dropdown"
-                                class="hidden absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
-                                <ul class="py-1">
-                                    @foreach ($extracurriculars as $extracurricular)
-                                        <li>
-                                            <button type="button"
-                                                class="extracurricular-option w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-[#0083E9] transition-colors duration-150"
-                                                data-value="{{ $extracurricular->name }}"
-                                                data-id="{{ $extracurricular->id }}">
-                                                {{ $extracurricular->name }}
-                                            </button>
-                                        </li>
-                                    @endforeach
-                                    @if ($extracurriculars->isEmpty())
-                                        <li class="px-4 py-2 text-sm text-gray-500 italic">Tidak ada data ekstrakurikuler
-                                        </li>
-                                    @endif
-                                </ul>
-                            </div>
+                                @error('role')
+                                    <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                                @enderror
 
-                            <input type="hidden" name="extracurricular_id" id="extracurricular_id"
-                                value="{{ old('extracurricular_id') }}">
-                            <p class="mt-1 text-xs text-gray-500">Pilih ekstrakurikuler dari daftar (opsional)</p>
+                                <p class="mt-2 text-xs text-gray-500">Pilih role pengguna</p>
+                            </div>
+                            {{-- Ekstrakurikuler --}}
+                            <div class="sm:col-span-2 relative" x-show="role === 'pembina'" x-transition>
+                                <label for="user_extracurricular" class="block mb-2 text-sm font-medium text-gray-900">
+                                    Ekstrakurikuler
+                                </label>
+
+                                <div class="relative">
+                                    <input type="text" name="user_extracurricular" id="user_extracurricular"
+                                        placeholder="Pilih atau ketik ekstrakurikuler" autocomplete="off"
+                                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-md focus:ring-[#0083E9] focus:border-[#0083E9] block w-full p-2.5 pr-10"
+                                        value="{{ old('user_extracurricular') }}">
+
+                                    <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                                        <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor"
+                                            viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="m19 9-7 7-7-7" />
+                                        </svg>
+                                    </div>
+                                </div>
+
+                                <div id="extracurricular-dropdown"
+                                    class="hidden absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                                    <ul class="py-1">
+                                        @foreach ($extracurriculars as $extracurricular)
+                                            <li>
+                                                <button type="button"
+                                                    class="extracurricular-option w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-[#0083E9] transition-colors duration-150"
+                                                    data-value="{{ $extracurricular->name }}"
+                                                    data-id="{{ $extracurricular->id }}">
+                                                    {{ $extracurricular->name }}
+                                                </button>
+                                            </li>
+                                        @endforeach
+                                        @if ($extracurriculars->isEmpty())
+                                            <li class="px-4 py-2 text-sm text-gray-500 italic">Tidak ada data
+                                                ekstrakurikuler
+                                            </li>
+                                        @endif
+                                    </ul>
+                                </div>
+
+                                <input type="hidden" name="extracurricular_id" id="extracurricular_id"
+                                    value="{{ old('extracurricular_id') }}">
+                                <p class="mt-1 text-xs text-gray-500">Pilih ekstrakurikuler dari daftar (opsional)</p>
+                            </div>
                         </div>
 
                         {{-- Password --}}

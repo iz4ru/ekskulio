@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Enums\PresenceStatus;
+use App\Enums\StudentGrade;
+use App\Enums\StudentStatus;
 use App\Exports\AttendanceExport;
 use App\Models\AcademicYear;
 use App\Models\Extracurricular;
@@ -25,7 +27,15 @@ class ReportController extends Controller
         }
 
         $extracurriculars = Extracurricular::where('is_active', true)->get();
-        $studentClasses = StudentClass::where('is_active', true)->orderBy('name')->get();
+
+        $studentClasses = StudentClass::where('is_active', true)
+            ->whereHas('students', function ($q) {
+                $q->whereIn('grade', [StudentGrade::X->value, StudentGrade::XI->value])
+                ->where('status', StudentStatus::AKTIF->value);
+            })
+            ->orderBy('name')
+            ->get();
+
         $academicYears = AcademicYear::orderBy('year', 'desc')->orderBy('semester', 'desc')->get();
 
         return view('role.kesiswaan.contents.report.index', compact(

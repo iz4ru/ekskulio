@@ -11,6 +11,7 @@ use App\Models\ScoreSummary;
 use App\Models\StudentClass;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Facades\Excel;
 
@@ -18,6 +19,7 @@ class ScoreController extends Controller
 {
     public function index(Request $request)
     {
+        $user = Auth::user();
         $activeAY = AcademicYear::getActiveYear();
         $selectedAY = $activeAY;
 
@@ -34,7 +36,7 @@ class ScoreController extends Controller
                     $q->whereHas('membership', function ($m) use ($search) {
                         $m->whereHas('student', function ($s) use ($search) {
                             $s->whereRaw('LOWER(name) LIKE ?', ["%{$search}%"])
-                              ->orWhereRaw('LOWER(id_number) LIKE ?', ["%{$search}%"]);
+                            ->orWhereRaw('LOWER(id_number) LIKE ?', ["%{$search}%"]);
                         })
                         ->orWhereHas('extracurricular', function ($e) use ($search) {
                             $e->whereRaw('LOWER(name) LIKE ?', ["%{$search}%"]);
@@ -43,9 +45,21 @@ class ScoreController extends Controller
                 });
             });
 
+        // Pembina hanya bisa melihat nilai dari ekskul yang mereka bina
+        if ($user->role === 'pembina') {
+            $query->whereHas('membership.extracurricular.users', fn($q) => $q->where('user_id', $user->id));
+        }
+
         $scores = $query->latest()->paginate(15)->withQueryString();
         
-        $extracurriculars = Extracurricular::where('is_active', true)->get();
+        // Pembina hanya melihat ekskul mereka sendiri di dropdown
+        $extracurricularsQuery = Extracurricular::where('is_active', true);
+        if ($user->role === 'pembina') {
+            $extracurricularsQuery->whereHas('users', fn($q) => $q->where('user_id', $user->id));
+        }
+        $extracurriculars = $extracurricularsQuery->get();
+
+        $isAdvisorSingleExtracurricular = $user->role === 'pembina' && $extracurriculars->count() === 1;
         
         $academicYears = AcademicYear::orderByRaw("
             CASE 
@@ -65,11 +79,21 @@ class ScoreController extends Controller
 
         $studentClasses = StudentClass::where('is_active', true)->orderBy('name')->get();
 
-        return view('role.kesiswaan.contents.score.index', compact('scores', 'extracurriculars', 'activeAY', 'selectedAY', 'academicYears', 'studentClasses'));
+        $view = match (true) {
+            $user->role === 'kesiswaan' => 'role.kesiswaan.contents.score.index',
+            $user->role === 'pembina' => 'role.pembina.contents.score.index',
+            default => abort(403),
+        };
+
+        return view($view, compact(
+            'scores', 'extracurriculars', 'activeAY', 'selectedAY', 
+            'academicYears', 'studentClasses', 'isAdvisorSingleExtracurricular'
+        ));
     }
 
     public function input(Request $request)
     {
+        $user = Auth::user();
         $activeAY = AcademicYear::getActiveYear();
 
         if (! $activeAY) {
@@ -77,7 +101,12 @@ class ScoreController extends Controller
                 ->withErrors(['error' => 'Tidak ada tahun ajaran aktif']);
         }
 
-        $extracurriculars = Extracurricular::where('is_active', true)->get();
+        // Pembina hanya melihat ekskul mereka sendiri di dropdown
+        $extracurricularsQuery = Extracurricular::where('is_active', true);
+        if ($user->role === 'pembina') {
+            $extracurricularsQuery->whereHas('users', fn($q) => $q->where('user_id', $user->id));
+        }
+        $extracurriculars = $extracurricularsQuery->get();
 
         $studentClasses = StudentClass::where('is_active', true)->orderBy('name')->get();
 
@@ -97,7 +126,13 @@ class ScoreController extends Controller
             END
         ")->get();
 
-        return view('role.kesiswaan.contents.score.input', compact('extracurriculars', 'activeAY', 'studentClasses', 'academicYears'));
+        $view = match (true) {
+            $user->role === 'kesiswaan' => 'role.kesiswaan.contents.score.input',
+            $user->role === 'pembina' => 'role.pembina.contents.score.input',
+            default => abort(403),
+        };
+
+        return view($view, compact('extracurriculars', 'activeAY', 'studentClasses', 'academicYears'));
     }
 
     public function getStudents(Request $request)
@@ -193,6 +228,8 @@ class ScoreController extends Controller
 
     public function export(Request $request)
     {
+        $user = Auth::user();
+
         $request->validate([
             'type' => 'sometimes|in:excel,pdf',
             'academic_year_id' => 'nullable|exists:academic_years,id',
@@ -209,6 +246,10 @@ class ScoreController extends Controller
             ->when($academicYear, fn ($q) => $q->where('academic_year_id', $academicYear->id))
             ->when($extracurricular, fn ($q) => $q->whereHas('membership', fn ($m) => $m->where('extracurricular_id', $extracurricular->id)))
             ->when($studentClass, fn ($q) => $q->whereHas('membership.student', fn ($s) => $s->where('class_id', $studentClass->id)));
+
+        if ($user->role === 'pembina') {
+            $query->whereHas('membership.extracurricular.users', fn($q) => $q->where('user_id', $user->id));
+        }
 
         $scores = $query->get()->sortBy('membership.student.name')->values();
 

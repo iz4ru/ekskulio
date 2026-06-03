@@ -16,24 +16,44 @@ class PresenceController extends Controller
 {
     public function index(Request $request)
     {
+        $user = Auth::user();
         $query = Extracurricular::query();
+
+        if ($user->role === 'pembina') {
+            $query->whereHas('users', fn($q) => $q->where('user_id', $user->id));
+        }
 
         $query->when($request->filled('search'), function ($q) use ($request) {
             $search = strtolower($request->search);
             $q->where(function ($q) use ($search) {
-                $q->whereRaw('LOWER(name) LIKE ?', ["%{$search}%"])
-                  ->orWhereRaw('LOWER(code) LIKE ?', ["%{$search}%"]);
+                $q->whereRaw('LOWER(name) LIKE ?', ["%{$search}%"])->orWhereRaw('LOWER(code) LIKE ?', ["%{$search}%"]);
             });
         });
 
         $x['extracurriculars'] = $query->orderBy('name')->paginate(10)->withQueryString();
 
-        return view('role.kesiswaan.contents.presence.index', $x);
+        $view = match (true) {
+            $user->role === 'kesiswaan' => 'role.kesiswaan.contents.presence.index',
+            $user->role === 'admin' => 'role.admin.contents.presence.index',
+            $user->role === 'pembina' => 'role.pembina.contents.presence.index',
+            default => abort(403),
+        };
+
+        return view($view, $x);
     }
 
     public function show(Request $request, $id)
     {
-        $x['extracurricular'] = Extracurricular::findOrFail($id);
+        $user = Auth::user();
+        $extracurricular = Extracurricular::findOrFail($id);
+
+        if ($user->role === 'pembina') {
+            $isManaging = $extracurricular->users()->where('user_id', $user->id)->exists();
+            if (!$isManaging) {
+                abort(403);
+            }
+        }
+
         $activeAY = AcademicYear::getActiveYear();
         $selectedAY = $activeAY;
 
@@ -41,8 +61,7 @@ class PresenceController extends Controller
             $selectedAY = AcademicYear::find($request->academic_year_id);
         }
 
-        $query = Presence::with(['academicYear', 'details'])
-            ->where('extracurricular_id', $id);
+        $query = Presence::with(['academicYear', 'details'])->where('extracurricular_id', $id);
 
         if ($selectedAY) {
             $query->where('academic_year_id', $selectedAY->id);
@@ -55,37 +74,58 @@ class PresenceController extends Controller
             });
         });
 
+        $x['extracurricular'] = $extracurricular;
         $x['presences'] = $query->orderBy('date', 'desc')->paginate(15)->withQueryString();
         $x['selectedAY'] = $selectedAY;
-
-        $x['academicYears'] = AcademicYear::orderByRaw("
-            CASE 
+        $x['academicYears'] = AcademicYear::orderByRaw(
+            "
+            CASE
                 WHEN is_active = 1 THEN 0
                 WHEN year > (SELECT year FROM academic_years WHERE is_active = 1 LIMIT 1) THEN 1
-                WHEN year = (SELECT year FROM academic_years WHERE is_active = 1 LIMIT 1) 
-                    AND semester = 'genap' 
+                WHEN year = (SELECT year FROM academic_years WHERE is_active = 1 LIMIT 1)
+                    AND semester = 'genap'
                     AND (SELECT semester FROM academic_years WHERE is_active = 1 LIMIT 1) = 'ganjil' THEN 2
                 ELSE 3
             END,
             year DESC,
-            CASE semester 
-                WHEN 'ganjil' THEN 1 
-                WHEN 'genap' THEN 2 
+            CASE semester
+                WHEN 'ganjil' THEN 1
+                WHEN 'genap' THEN 2
             END
-        ")->get();
+        ",
+        )->get();
 
-        return view('role.kesiswaan.contents.presence.show', $x);
+        $view = match (true) {
+            $user->role === 'kesiswaan' => 'role.kesiswaan.contents.presence.show',
+            $user->role === 'admin' => 'role.admin.contents.presence.show',
+            $user->role === 'pembina' => 'role.pembina.contents.presence.show',
+            default => abort(403),
+        };
+
+        return view($view, $x);
     }
 
     public function create(Request $request)
     {
+        $user = Auth::user();
+
         $extracurricularId = $request->extracurricular_id;
+        $extracurricular = Extracurricular::findOrFail($extracurricularId);
+
+        if ($user->role === 'pembina') {
+            $isManaging = $extracurricular->users()->where('user_id', $user->id)->exists();
+            if (!$isManaging) {
+                abort(403);
+            }
+        }
+
         $activeAY = AcademicYear::getActiveYear();
 
-        $x['extracurricular'] = Extracurricular::findOrFail($extracurricularId);
+        $x['extracurricular'] = $extracurricular;
 
-        if (! $activeAY) {
-            return redirect()->route('presence.index')
+        if (!$activeAY) {
+            return redirect()
+                ->route('presence.index')
                 ->withErrors(['error' => 'Tidak ada tahun ajaran aktif.']);
         }
 
@@ -95,18 +135,32 @@ class PresenceController extends Controller
                     ->where('academic_year_id', $activeAY->id)
                     ->where('status', 'aktif');
             })
-            ->with(['studentClass', 'memberships' => function ($query) use ($extracurricularId, $activeAY) {
-                $query->where('extracurricular_id', $extracurricularId)
-                    ->where('academic_year_id', $activeAY->id);
-            }])
-            ->orderBy('name')
+            ->with([
+                'studentClass',
+                'memberships' => function ($query) use ($extracurricularId, $activeAY) {
+                    $query->where('extracurricular_id', $extracurricularId)
+                        ->where('academic_year_id', $activeAY->id);
+                },
+            ])
+            ->leftJoin('student_classes', 'students.class_id', '=', 'student_classes.id')
+            ->select('students.*')
+            ->orderBy('students.grade')
+            ->orderBy('student_classes.name')
+            ->orderBy('students.name')
             ->get();
 
         foreach ($x['students'] as $student) {
-            $student->is_class_inactive = ! $student->studentClass || ! $student->studentClass->is_active;
+            $student->is_class_inactive = !$student->studentClass || !$student->studentClass->is_active;
         }
 
-        return view('role.kesiswaan.contents.presence.create', $x);
+        $view = match (true) {
+            $user->role === 'kesiswaan' => 'role.kesiswaan.contents.presence.create',
+            $user->role === 'admin' => 'role.admin.contents.presence.create',
+            $user->role === 'pembina' => 'role.pembina.contents.presence.create',
+            default => abort(403),
+        };
+
+        return view($view, $x);
     }
 
     public function store(Request $request)
@@ -129,7 +183,7 @@ class PresenceController extends Controller
 
         $activeAY = AcademicYear::getActiveYear();
 
-        if (! $activeAY) {
+        if (!$activeAY) {
             return back()->withErrors(['error' => 'Tidak ada tahun ajaran aktif.']);
         }
 
@@ -141,10 +195,7 @@ class PresenceController extends Controller
         ]);
 
         foreach ($validated['attendance'] as $studentId => $status) {
-            $membership = ExtracurricularMembership::where('student_id', $studentId)
-                ->where('extracurricular_id', $validated['extracurricular_id'])
-                ->where('academic_year_id', $activeAY->id)
-                ->first();
+            $membership = ExtracurricularMembership::where('student_id', $studentId)->where('extracurricular_id', $validated['extracurricular_id'])->where('academic_year_id', $activeAY->id)->first();
 
             if ($membership) {
                 PresenceDetail::create([
@@ -161,10 +212,38 @@ class PresenceController extends Controller
 
     public function edit($id)
     {
-        $x['presence'] = Presence::with(['extracurricular', 'details.student'])->findOrFail($id);
+        $user = Auth::user();
+
+        $x['presence'] = Presence::with([
+            'extracurricular',
+            'details' => function ($query) {
+                $query->join('students', 'presence_details.student_id', '=', 'students.id')
+                    ->leftJoin('student_classes', 'students.class_id', '=', 'student_classes.id')
+                    ->select('presence_details.*')
+                    ->orderBy('students.grade')
+                    ->orderBy('student_classes.name')
+                    ->orderBy('students.name');
+            },
+            'details.student.studentClass',
+        ])->findOrFail($id);
+
         $x['extracurricular'] = $x['presence']->extracurricular;
 
-        return view('role.kesiswaan.contents.presence.edit', $x);
+        if ($user->role === 'pembina') {
+            $isManaging = $x['extracurricular']->users()->where('user_id', $user->id)->exists();
+            if (!$isManaging) {
+                abort(403);
+            }
+        }
+
+        $view = match (true) {
+            $user->role === 'kesiswaan' => 'role.kesiswaan.contents.presence.edit',
+            $user->role === 'admin' => 'role.admin.contents.presence.edit',
+            $user->role === 'pembina' => 'role.pembina.contents.presence.edit',
+            default => abort(403),
+        };
+
+        return view($view, $x);
     }
 
     public function update(Request $request, $id)
@@ -186,10 +265,7 @@ class PresenceController extends Controller
         $activeAY = $presence->academicYear;
 
         foreach ($validated['attendance'] as $studentId => $status) {
-            $membership = ExtracurricularMembership::where('student_id', $studentId)
-                ->where('extracurricular_id', $presence->extracurricular_id)
-                ->where('academic_year_id', $activeAY->id)
-                ->first();
+            $membership = ExtracurricularMembership::where('student_id', $studentId)->where('extracurricular_id', $presence->extracurricular_id)->where('academic_year_id', $activeAY->id)->first();
 
             $detailData = [
                 'presence_id' => $presence->id,
@@ -219,7 +295,7 @@ class PresenceController extends Controller
 
         $request->validate(['password' => 'required']);
 
-        if (! Hash::check($request->password, Auth::user()->password)) {
+        if (!Hash::check($request->password, Auth::user()->password)) {
             return back()->withErrors(['password' => 'Password salah!']);
         }
 

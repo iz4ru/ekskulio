@@ -48,12 +48,11 @@
                 <i class="fa-solid fa-lock text-sm"></i>
                 <span>Tutup Periode Saat Ini</span>
             </a>
-            @if (session('show_download_button'))
-                <a href="{{ route('academic-years.export-template') }}"
-                    class="cursor-pointer px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700 flex items-center gap-1">
-                    <i class="fa-solid fa-file-excel mr-2"></i> Download Template Excel
-                </a>
-            @endif
+            <a href="{{ route('academic-years.export') }}"
+                class="inline-flex cursor-pointer items-center px-5 py-2.5 gap-2 text-sm font-medium text-center text-white bg-green-600 rounded-md focus:ring-4 focus:ring-green-300 hover:bg-[#E5FFDE] hover:text-green-600 active:scale-[0.98]
+            transition-all duration-300 ease-out">
+                <i class="fa-solid fa-file-excel mr-2"></i> Download Data Siswa Aktif
+            </a>
         </div>
 
         <div class="my-4 border-t-2 border-dashed border-gray-300 w-full"></div>

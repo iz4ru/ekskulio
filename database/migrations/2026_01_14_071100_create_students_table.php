@@ -17,6 +17,7 @@ return new class extends Migration
             $table->uuid('uuid')->unique();
             $table->string('name');
             $table->foreignId('class_id')->nullable()->constrained('student_classes')->nullOnDelete();
+            $table->string('last_class')->nullable();
             $table->enum('grade', ['X', 'XI', 'XII'])->nullable();
             $table->enum('status', ['aktif', 'lulus', 'mutasi'])->default('aktif');
             $table->year('enrollment_year');

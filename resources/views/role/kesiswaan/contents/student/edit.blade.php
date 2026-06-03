@@ -144,7 +144,7 @@
                                 class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-md focus:ring-[#0083E9] focus:border-[#0083E9] block w-full p-2.5"
                                 required>
                                 @foreach ($grades as $grade)
-                                    <option value="{{ $grade }}" {{ old('grade', $student->grade) == $grade ? 'selected' : '' }}>
+                                    <option value="{{ $grade }}" {{ old('grade', $student->grade?->value) == $grade ? 'selected' : '' }}>
                                         Kelas {{ $grade }}
                                     </option>
                                 @endforeach
@@ -165,13 +165,13 @@
                                 class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-md focus:ring-[#0083E9] focus:border-[#0083E9] block w-full p-2.5"
                                 required>
                                 <option value="">-- Pilih Status --</option>
-                                <option value="aktif" {{ old('status', $student->status) == 'aktif' ? 'selected' : '' }}>
+                                <option value="aktif" {{ old('status', $student->status?->value) == 'aktif' ? 'selected' : '' }}>
                                     Aktif
                                 </option>
-                                <option value="lulus" {{ old('status', $student->status) == 'lulus' ? 'selected' : '' }}>
+                                <option value="lulus" {{ old('status', $student->status?->value) == 'lulus' ? 'selected' : '' }}>
                                     Lulus
                                 </option>
-                                <option value="mutasi" {{ old('status', $student->status) == 'mutasi' ? 'selected' : '' }}>
+                                <option value="mutasi" {{ old('status', $student->status?->value) == 'mutasi' ? 'selected' : '' }}>
                                     Mutasi
                                 </option>
                             </select>

@@ -21,16 +21,64 @@ class AcademicYearClosureService
     {
         $isYearChange = $closingYear->year !== $targetYear->year;
 
-        return [
+        $preview = [
             'type' => $isYearChange ? 'academic_year' : 'semester',
-            'memberships_to_close' => ExtracurricularMembership::where('academic_year_id', $closingYear->id)
-                ->where('status', MembershipStatus::AKTIF->value)->count(),
-            'students_to_graduate' => $isYearChange ? Student::where('grade', StudentGrade::XII->value)
-                ->where('status', StudentStatus::AKTIF->value)->count() : 0,
-            'students_to_promote'  => $isYearChange ? Student::whereIn('grade', [StudentGrade::X->value, StudentGrade::XI->value])
-                ->where('status', StudentStatus::AKTIF->value)->count() : 0,
-            'classes_to_create'    => $isYearChange ? $this->countNewClassesNeeded() : 0,
+            'memberships_to_close' => ExtracurricularMembership::where('academic_year_id', $closingYear->id)->where('status', MembershipStatus::AKTIF->value)->count(),
+            'students_to_graduate' => 0,
+            'students_to_promote' => 0,
+            'promoted_students' => 0,
+            'graduated_students' => 0,
+            'classes_created' => 0,
+            'class_promotions' => [],
         ];
+
+        if ($isYearChange) {
+            $preview['students_to_graduate'] = Student::where('grade', StudentGrade::XII->value)->where('status', StudentStatus::AKTIF->value)->count();
+
+            $preview['students_to_promote'] = $preview['promoted_students'] = Student::whereIn('grade', [StudentGrade::X->value, StudentGrade::XI->value])
+                ->where('status', StudentStatus::AKTIF->value)
+                ->count();
+
+            $preview['class_promotions'] = $this->getClassPromotionPreview();
+        }
+
+        return $preview;
+    }
+
+    /**
+     * Generate preview mapping kelas yang akan dipromosikan
+     *
+     * @return array<int, array{from: string, to: string, count: int}>
+     */
+    protected function getClassPromotionPreview(): array
+    {
+        $promotions = [];
+
+        // Ambil semua kelas yang dipakai siswa X & XI yang aktif
+        $classes = StudentClass::whereHas('students', function ($q) {
+            $q->whereIn('grade', [StudentGrade::X->value, StudentGrade::XI->value])->where('status', StudentStatus::AKTIF->value);
+        })
+            ->withCount([
+                'students as student_count' => function ($q) {
+                    $q->whereIn('grade', [StudentGrade::X->value, StudentGrade::XI->value])->where('status', StudentStatus::AKTIF->value);
+                },
+            ])
+            ->get();
+
+        foreach ($classes as $class) {
+            if ($class->student_count > 0) {
+                $promotions[] = [
+                    'from' => $class->name,
+                    'to' => $this->promoteClassName($class->name),
+                    'count' => $class->student_count,
+                ];
+            }
+        }
+
+        // Sort by class name for consistent display
+        usort($promotions, fn($a, $b) => $a['from'] <=> $b['from']);
+
+        return $promotions;
     }
 
     /**
@@ -39,7 +87,7 @@ class AcademicYearClosureService
     protected function countNewClassesNeeded(): int
     {
         $count = 0;
-        
+
         // Cek kelas X yang akan jadi XI
         Student::where('grade', StudentGrade::X->value)
             ->where('status', StudentStatus::AKTIF->value)
@@ -72,17 +120,17 @@ class AcademicYearClosureService
     /**
      * Eksekusi penutupan tahun ajaran / semester
      */
-    public function close(AcademicYear $closingYear, AcademicYear $targetYear): array
+    public function close(AcademicYear $closingYear, AcademicYear $targetYear, array $classMappings = []): array
     {
         $isYearChange = $closingYear->year !== $targetYear->year;
 
-        return DB::transaction(function () use ($closingYear, $targetYear, $isYearChange): array {
+        return DB::transaction(function () use ($closingYear, $targetYear, $isYearChange, $classMappings): array {
             $results = [
                 'type' => $isYearChange ? 'academic_year' : 'semester',
                 'closed_memberships' => 0,
                 'graduated_students' => 0,
-                'promoted_students'  => 0,
-                'classes_created'    => 0,
+                'promoted_students' => 0,
+                'classes_created' => 0,
             ];
 
             // 1. Tutup semua keanggotaan di periode yang ditutup
@@ -92,23 +140,42 @@ class AcademicYearClosureService
 
             // 2. Jika ganti TAHUN AJARAN → Luluskan XII & Naikkan Kelas + Update Class
             if ($isYearChange) {
-                // 2a. Luluskan siswa kelas XII
-                $results['graduated_students'] = Student::where('grade', StudentGrade::XII->value)
-                    ->where('status', StudentStatus::AKTIF->value)
-                    ->update(['status' => StudentStatus::LULUS->value]);
+                // Snapshot ID semua grade SEBELUM mutasi apapun
+                $gradeXIds  = Student::where('grade', StudentGrade::X->value)
+                    ->where('status', StudentStatus::AKTIF->value)->pluck('id');
 
-                // 2b. Naikkan kelas X → XI + update class_id
+                $gradeXIIds = Student::where('grade', StudentGrade::XI->value)
+                    ->where('status', StudentStatus::AKTIF->value)->pluck('id');
+
+                // Build class map dari user input
+                $classMap = collect($classMappings)
+                    ->mapWithKeys(fn($mapping) => [
+                        strtoupper(trim($mapping['from'])) => strtoupper(trim($mapping['to'])),
+                    ])->toArray();
+
+                // Luluskan XII (dengan last_class + null class_id)
+                $graduatingStudents = Student::where('grade', StudentGrade::XII->value)
+                    ->where('status', StudentStatus::AKTIF->value)
+                    ->with('studentClass')
+                    ->get();
+
+                foreach ($graduatingStudents as $student) {
+                    $student->update([
+                        'status'     => StudentStatus::LULUS->value,
+                        'class_id'   => null,
+                        'last_class' => $student->studentClass?->name ?? null,
+                    ]);
+                }
+                $results['graduated_students'] = $graduatingStudents->count();
+
+                // Promote X → XI
                 $results['promoted_students'] += $this->promoteStudentsWithClass(
-                    StudentGrade::X->value,
-                    StudentGrade::XI->value,
-                    $results
+                    $gradeXIds, StudentGrade::XI->value, $results, $classMap
                 );
 
-                // 2c. Naikkan kelas XI → XII + update class_id
+                // Promote XI → XII
                 $results['promoted_students'] += $this->promoteStudentsWithClass(
-                    StudentGrade::XI->value,
-                    StudentGrade::XII->value,
-                    $results
+                    $gradeXIIds, StudentGrade::XII->value, $results, $classMap
                 );
             }
 
@@ -118,7 +185,7 @@ class AcademicYearClosureService
 
             Log::info('Academic year/semester closed', [
                 'from' => $closingYear->year . ' ' . $closingYear->semester,
-                'to'   => $targetYear->year . ' ' . $targetYear->semester,
+                'to' => $targetYear->year . ' ' . $targetYear->semester,
                 'results' => $results,
             ]);
 
@@ -129,29 +196,26 @@ class AcademicYearClosureService
     /**
      * Promote students dari grade lama ke grade baru + update class_id
      */
-    protected function promoteStudentsWithClass(string $fromGrade, string $toGrade, array &$results): int
+    protected function promoteStudentsWithClass($studentIds, string $toGrade, array &$results, array $classMap = []): int
     {
+        $results['classes_created'] ??= 0;
         $promotedCount = 0;
 
-        // Gunakan cursor untuk hemat memori pada dataset besar
-        Student::where('grade', $fromGrade)
+        Student::whereIn('id', $studentIds)
             ->where('status', StudentStatus::AKTIF->value)
             ->cursor()
-            ->each(function ($student) use ($toGrade, &$results, &$promotedCount): void {
-                $newClassName = $this->promoteClassName($student->studentClass?->name);
-                
-                // Cari atau buat kelas tujuan
-                $newClass = StudentClass::firstOrCreate(
-                    ['name' => $newClassName],
-                    ['name' => $newClassName, 'is_active' => true]
-                );
+            ->each(function ($student) use ($toGrade, &$results, &$promotedCount, $classMap): void {
+                $currentClassName = strtoupper(trim($student->studentClass?->name ?? ''));
 
-                // Track jika kelas baru dibuat
+                // Pakai mapping dari user, fallback ke auto-generate
+                $newClassName = $classMap[$currentClassName] ?? $this->promoteClassName($student->studentClass?->name);
+
+                $newClass = StudentClass::firstOrCreate(['name' => $newClassName], ['is_active' => true]);
+
                 if ($newClass->wasRecentlyCreated) {
                     $results['classes_created']++;
                 }
 
-                // Update grade dan class_id
                 $student->update([
                     'grade' => $toGrade,
                     'class_id' => $newClass->id,
@@ -162,11 +226,10 @@ class AcademicYearClosureService
 
         return $promotedCount;
     }
-
     /**
      * Generate nama kelas baru berdasarkan pola promosi
-     * 
-     * Pattern: 
+     *
+     * Pattern:
      * - "X RPL 1" → "XI RPL 1"
      * - "XI TKJ 2" → "XII TKJ 2"
      * - "X" → "XI"
@@ -180,13 +243,17 @@ class AcademicYearClosureService
         $className = strtoupper(trim($className));
 
         // Pattern matching: Grade di awal, diikuti opsional suffix (spasi + jurusan + nomor)
-        return preg_replace_callback('/^(X|XI)(\s+.+)?$/', function ($matches) {
-            $grade = $matches[1];
-            $suffix = $matches[2] ?? ''; // Termasuk spasi awal jika ada
+        return preg_replace_callback(
+            '/^(X|XI)(\s+.+)?$/',
+            function ($matches) {
+                $grade = $matches[1];
+                $suffix = $matches[2] ?? ''; // Termasuk spasi awal jika ada
 
-            $newGrade = $grade === 'X' ? 'XI' : 'XII';
+                $newGrade = $grade === 'X' ? 'XI' : 'XII';
 
-            return $newGrade . $suffix;
-        }, $className);
+                return $newGrade . $suffix;
+            },
+            $className,
+        );
     }
 }

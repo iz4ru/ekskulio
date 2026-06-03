@@ -72,8 +72,12 @@ class UserController extends Controller
             ],
         );
 
+        if ($validated['role'] === 'admin' && $request->extracurricular_id) {
+            return back()->withErrors(['extracurricular_id' => 'Admin tidak boleh mengampu ekstrakurikuler'])->withInput();
+        }
+
         $user = User::create([
-            'name' => ucwords(strtoupper($validated['name'])),
+            'name' => ucwords(strtolower($validated['name'])),
             'username' => $validated['username'],
             'email' => $validated['email'],
             'phone' => $validated['phone'],
@@ -82,7 +86,7 @@ class UserController extends Controller
             'is_active' => true,
         ]);
 
-        // ✅ Relasi ExtracurricularUser jika ada
+        // Relasi ExtracurricularUser jika ada
         if ($request->extracurricular_id) {
             ExtracurricularUser::create([
                 'extracurricular_id' => $request->extracurricular_id,
@@ -120,11 +124,12 @@ class UserController extends Controller
             'email.unique' => 'Email sudah digunakan pengguna lain',
             'role.in' => 'Role harus Admin atau Pembina',
             'password.confirmed' => 'Konfirmasi password tidak cocok',
+            'password.min' => 'Password minimal 8 karakter',
         ]);
 
         // Update user data
         $user->update([
-            'name' => ucwords(strtoupper($validated['name'])),
+            'name' => ucwords(strtolower($validated['name'])),
             'username' => $validated['username'],
             'email' => $validated['email'],
             'phone' => $validated['phone'],
@@ -151,6 +156,56 @@ class UserController extends Controller
             ->with('success', "Pengguna {$user->name} berhasil diperbarui!");
     }
 
+    public function profile()
+    {
+        $x['user'] = Auth::user();
+
+        if (Auth::user()->role != 'kesiswaan') {
+            abort(403, 'Unauthorized');
+        }
+
+        return view('role.kesiswaan.contents.profile.profile', $x);
+    }
+
+    public function updateProfile(Request $request)
+    {
+        $user = Auth::user();
+
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'username' => 'required|string|max:50|unique:users,username,' . $user->id,
+            'email' => 'required|email|max:255|unique:users,email,' . $user->id,
+            'phone' => 'required|string|max:20',
+            'password' => 'nullable|min:8|confirmed',
+        ], [
+            'username.unique' => 'Username sudah digunakan pengguna lain',
+            'email.unique' => 'Email sudah digunakan pengguna lain',
+            'password.confirmed' => 'Konfirmasi password tidak cocok',
+            'password.min' => 'Password minimal 8 karakter',
+        ]);
+
+        if ($user->role != 'kesiswaan') {
+            return back()->withErrors(['role' => 'Anda tidak diizinkan mengedit profil.']);
+        }
+
+        // Update user data
+        $user->update([
+            'name' => ucwords(strtolower($validated['name'])),
+            'username' => $validated['username'],
+            'email' => $validated['email'],
+            'phone' => $validated['phone'],
+        ]);
+
+        // Update password jika diisi
+        if ($request->filled('password')) {
+            $user->update(['password' => Hash::make($validated['password'])]);
+        }
+
+        return redirect()
+            ->route('profile.index')
+            ->with('success', "Profil berhasil diperbarui!");
+    }
+
     public function destroy(Request $request, $uuid)
     {
         $user = User::where('uuid', $uuid)->firstOrFail();
@@ -164,7 +219,7 @@ class UserController extends Controller
             return back()->withErrors(['password' => 'Password yang Anda masukkan salah!']);
         }
 
-        // ✅ Pakai relasi extracurricularList (lebih clean)
+        // Pakai relasi extracurricularList (lebih clean)
         $extracurriculars = $user->extracurricularList;
 
         if ($extracurriculars->count() > 0) {

@@ -150,10 +150,6 @@
                                         </option>
                                     @endforeach
                                 </select>
-                                
-                                <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                                    <i class="fa-solid fa-rotate text-gray-400 text-xs" title="Akan dihitung otomatis dari tahun masuk"></i>
-                                </div>
                             </div>
                             
                             <p class="mt-1 text-xs text-gray-500">

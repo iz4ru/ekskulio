@@ -82,12 +82,19 @@
                     </thead>
                     <tbody>
                         @foreach ($users as $user)
-                            <tr class="hover:bg-gray-100 transition-colors transition-duration-300 border-b border-gray-200">
+                            <tr
+                                class="hover:bg-gray-100 transition-colors transition-duration-300 border-b border-gray-200">
                                 <td class="px-4 py-3 border-gray-200">{{ $loop->iteration }}</td>
                                 <td class="px-4 py-3 font-medium whitespace-nowrap border-gray-200">
-                                    <img class="w-8 h-8 rounded-full"
-                                        src="https://ui-avatars.com/api/?name={{ urlencode($user->name) }}&background=0083E9&color=fff"
-                                        alt="user avatar">
+                                    @if ($user->role === 'admin')
+                                        <img class="w-8 h-8 rounded-full"
+                                            src="https://ui-avatars.com/api/?name={{ urlencode($user->name) }}&background=008236&color=fff"
+                                            alt="advisor avatar">
+                                    @else
+                                        <img class="w-8 h-8 rounded-full"
+                                            src="https://ui-avatars.com/api/?name={{ urlencode($user->name) }}&background=0083E9&color=fff"
+                                            alt="advisor avatar">
+                                    @endif
                                 </td>
                                 <td class="px-4 py-3 font-medium whitespace-nowrap border-gray-200">
                                     {{ $user->name }}
@@ -123,12 +130,14 @@
                                     @if ($user->extracurriculars->count() > 0)
                                         @foreach ($user->extracurriculars as $item)
                                             <span
-                                                class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-[#0083E9]/10 text-[#0083E9] mr-1 mb-1">
+                                                class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#0083E9]/10 text-[#0083E9]">
                                                 {{ $item->extracurricular->name }}
                                             </span>
                                         @endforeach
+                                    @elseif($user->role === 'pembina')
+                                        <span class="text-gray-400 italic">Belum mengampu ekstrakurikuler</span>
                                     @else
-                                        <span class="text-gray-400 italic">Belum mengampu</span>
+                                        <span class="text-gray-400 italic">-</span>
                                     @endif
                                 </td>
                                 <td class="px-4 py-3 font-medium whitespace-nowrap border-gray-200">
@@ -160,8 +169,8 @@
                                             id="delete-form-{{ $user->uuid }}" style="display: inline;">
                                             @csrf
                                             @method('DELETE')
-                                            <input type="hidden" name="password"
-                                                id="delete-password-{{ $user->uuid }}" value="">
+                                            <input type="hidden" name="password" id="delete-password-{{ $user->uuid }}"
+                                                value="">
                                             <button type="button"
                                                 class="delete-btn text-[#EF4444] hover:underline font-medium focus:outline-none cursor-pointer flex flex-col lg:flex-row items-center gap-1"
                                                 data-id="{{ $user->uuid }}" data-name="{{ $user->name }}">

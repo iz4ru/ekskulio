@@ -5,22 +5,49 @@
     <title>Laporan Kehadiran</title>
 </head>
     <style>
-        body { font-family: Arial, sans-serif; font-size: 10px; }
+        @font-face {
+            font-family: 'DM Sans';
+            src: url('{{ public_path('fonts/DMSans-Regular.ttf') }}') format('truetype');
+            font-weight: 400;
+        }
+        @font-face {
+            font-family: 'DM Sans';
+            src: url('{{ public_path('fonts/DMSans-Medium.ttf') }}') format('truetype');
+            font-weight: 500;
+        }
+        @font-face {
+            font-family: 'DM Sans';
+            src: url('{{ public_path('fonts/DMSans-Bold.ttf') }}') format('truetype');
+            font-weight: 600;
+        }
+
+        @page {
+            size: A4 landscape;
+            margin: 10mm;
+        }
+
+        @media print {
+            body {
+                size: A4 landscape;
+            }
+        }
+    
+        body { font-family: DM Sans, sans-serif; font-size: 10px; }
         table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         tbody tr:nth-child(even) {
             background-color: #f5f5f5;
         }
         th, td { border: 1px solid #000; padding: 4px; text-align: center; }
-        th { background-color: #f0f0f0; }
+        th { background-color: #ffffff; }
         .header { text-align: center; margin-bottom: 20px; }
         .header h1 { margin: 0; font-size: 14px; }
         .header p { margin: 5px 0; font-size: 11px; }
         .text-left { text-align: left; }
-        .bg-green { background-color: #d9d9d9; }
-        .bg-yellow { background-color: #cfcfcf; }
-        .bg-blue { background-color: #bfbfbf; }
-        .bg-red { background-color: #a6a6a6; }
-        .bg-gray { background-color: #8c8c8c; color: #fff; }
+        .bg-green { background-color: #fafafa; }
+        .bg-yellow { background-color: #fafafa; }
+        .bg-blue { background-color: #fafafa; }
+        .bg-red { background-color: #fafafa; }
+        .bg-gray { background-color: #fafafa; }
     </style>
 </head>
 <body>

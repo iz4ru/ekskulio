@@ -30,7 +30,7 @@
         <div class="flex gap-4 mb-4 justify-between">
             <div>
                 <h1 class="text-xl lg:text-2xl font-semibold text-gray-600">Kelola Kategori Ekstrakurikuler</h1>
-                <p class="text-sm lg:text-base text-gray-400"> Tambah, ubah, dan hapus data kategori ekstrakurikuler
+                <p class="text-sm lg:text-base text-gray-400">Tambah, ubah, dan hapus data kategori ekstrakurikuler
                     sekolah.</p>
 
             </div>

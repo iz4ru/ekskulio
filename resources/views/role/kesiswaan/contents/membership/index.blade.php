@@ -168,8 +168,9 @@
                                                 method="POST" class="inline">
                                                 @csrf
                                                 @method('PATCH')
-                                                <select name="status" onchange="this.form.submit()"
-                                                    class="text-xs px-4 py-1 border border-gray-300 rounded-md bg-white">
+                                                <select name="status"
+                                                    class="status-select cursor-pointer text-xs px-4 py-1 border border-gray-300 rounded-md bg-white"
+                                                    data-current="aktif">
                                                     <option value="aktif" selected>Aktif</option>
                                                     <option value="selesai">Selesai</option>
                                                     <option value="drop">Drop</option>
@@ -182,7 +183,7 @@
                                                 @csrf
                                                 @method('DELETE')
                                                 <button type="button"
-                                                    class="delete-btn text-red-500 hover:text-red-700 p-1"
+                                                    class="delete-btn cursor-pointer text-red-500 hover:text-red-700 p-1"
                                                     data-id="{{ $membership->id }}">
                                                     <i class="fa-solid fa-trash text-sm"></i>
                                                 </button>
@@ -239,6 +240,41 @@
 
                         if (confirmDelete) {
                             document.getElementById('delete-form-' + membershipId).submit();
+                        }
+                    }
+                });
+
+                document.addEventListener('change', async function(e) {
+                    const statusSelect = e.target.closest('.status-select');
+
+                    if (statusSelect) {
+                        e.preventDefault();
+
+                        const selectedValue = statusSelect.value;
+                        const form = statusSelect.closest('form');
+
+                        const labelMap = {
+                            'selesai': 'Selesai',
+                            'drop': 'Drop',
+                        };
+
+                        const {
+                            isConfirmed
+                        } = await Swal.fire({
+                            title: 'Ubah Status Keanggotaan',
+                            text: `Apakah Anda yakin ingin mengubah status menjadi "${labelMap[selectedValue]}"?`,
+                            icon: 'warning',
+                            showCancelButton: true,
+                            cancelButtonText: 'Batal',
+                            confirmButtonText: 'Ya, Ubah',
+                            confirmButtonColor: '#EF4444',
+                            cancelButtonColor: '#6B7280',
+                        });
+
+                        if (isConfirmed) {
+                            form.submit();
+                        } else {
+                            statusSelect.value = statusSelect.dataset.current;
                         }
                     }
                 });

@@ -55,7 +55,10 @@
                             <i class="fa-solid fa-calendar fa-xl text-[#0083E9]"></i>
                         </div>
                         <p class="text-sm lg:text-base text-gray-500">Tahun Ajaran</p>
-                        <h3 class="text-base lg:text-2xl font-bold text-gray-700">2025/2026</h3>
+                        <h3 class="text-base lg:text-2xl font-bold text-gray-700">
+                            {{ $activeAY?->year ?? '-' }}
+                        </h3>
+                        <p class="text-xs text-gray-500">{{ ucwords($activeAY?->semester ?? '-') }}</p>
                     </div>
                 </div>
             </div>
@@ -73,7 +76,7 @@
                         <div class="w-12 h-12 mb-4 bg-[#CFFFEA]/20 rounded-lg flex items-center justify-center">
                             <i class="fa-solid fa-people-group fa-xl text-[#00B67A]"></i>
                         </div>
-                        <h3 class="text-2xl lg:text-3xl font-bold text-gray-700">1536</h3>
+                        <h3 class="text-2xl lg:text-3xl font-bold text-gray-700">{{ $totalStudents }}</h3>
                         <p class="text-sm lg:text-base text-gray-500">Siswa Aktif</p>
                     </div>
                 </div>
@@ -92,7 +95,7 @@
                         <div class="w-12 h-12 mb-4 bg-[#F3E8FF]/20 rounded-lg flex items-center justify-center">
                             <i class="fa-solid fa-people-roof fa-xl text-[#A855F7]"></i>
                         </div>
-                        <h3 class="text-2xl lg:text-3xl font-bold text-gray-700">42</h3>
+                        <h3 class="text-2xl lg:text-3xl font-bold text-gray-700">{{ $totalExtracurriculars }}</h3>
                         <p class="text-sm lg:text-base text-gray-500">Ekstrakurikuler</p>
                     </div>
                 </div>
@@ -111,7 +114,7 @@
                         <div class="w-12 h-12 mb-4 bg-[#FEF9C3]/20 rounded-lg flex items-center justify-center">
                             <i class="fa-solid fa-chalkboard-teacher fa-xl text-[#FACC15]"></i>
                         </div>
-                        <h3 class="text-2xl lg:text-3xl font-bold text-gray-700">53</h3>
+                        <h3 class="text-2xl lg:text-3xl font-bold text-gray-700">{{ $totalAdvisor }}</h3>
                         <p class="text-sm lg:text-base text-gray-500">Pembina</p>
                     </div>
                 </div>
@@ -129,7 +132,7 @@
                 </div>
                 <div class="flex flex-col relative z-10">
                     <h3 class="lg:text-lg font-semibold text-gray-700 mb-4">Pemerataan Ekstrakurikuler</h3>
-                    <div id="chart-ekskul"></div>
+                    <div id="extracurricular-chart" class="md:h-[350px] h-[400px]"></div>
                 </div>
             </div>
 
@@ -142,8 +145,8 @@
                     </div>
                 </div>
                 <div class="flex flex-col relative z-10">
-                    <h3 class="lg:text-lg font-semibold text-gray-700 mb-4">Top 10 Ekskul Terfavorit</h3>
-                    <div id="chart-top-ekskul"></div>
+                    <h3 class="lg:text-lg font-semibold text-gray-700 mb-4">Top 10 Ekstrakurikuler Terfavorit</h3>
+                    <div id="top-extracurricular-chart" class="md:h-[350px] h-[400px]"></div>
                 </div>
             </div>
         </div>
@@ -170,118 +173,62 @@
 
         <script>
             // =========================
-            // DUMMY DATA (nanti ganti dari backend)
-            // =========================
-
-            // 40 ekskul (contoh, bisa ganti dari DB)
-            const allEkskul = [
-                'Pramuka', 'Paskibra', 'Rohis', 'IT Club', 'Basket', 'Futsal', 'Voli', 'Badminton',
-                'PMR', 'KIR', 'English Club', 'Japanese Club', 'Paduan Suara', 'Band', 'Tari Tradisional',
-                'Teater', 'Sinematografi', 'Jurnalistik', 'Desain Grafis', 'Robotik', 'Broadcasting',
-                'Pencak Silat', 'Taekwondo', 'Karate', 'Renang', 'Catur', 'Panahan', 'Karya Ilmiah',
-                'Matematika', 'Fisika', 'Biologi', 'Kimia', 'Geografi', 'Ekonomi', 'Entrepreneurship',
-                'Tahfidz', 'Hadrah', 'Fotografi', 'Kuliner'
-            ];
-
-            // Dummy jumlah anggota per ekskul (random saja)
-            const allEkskulMembers = allEkskul.map(() => Math.floor(Math.random() * 40) + 10);
-
-            // =========================
             // 1. Donut Pemerataan Ekskul (dikelompokkan)
             // =========================
 
             // Kelompok kategori ekskul
-            const ekskulGroups = ['Olahraga', 'Seni', 'Keagamaan', 'Akademik', 'Lainnya'];
-            const ekskulGroupCounts = [0, 0, 0, 0, 0];
+            const extracurricularGroups = @json($categoryDist->pluck('name'));
+            const extracurricularGroupCounts = @json($categoryDist->pluck('count'));
 
-            // Mapping sederhana: index ekskul -> group
-            allEkskul.forEach((name, index) => {
-                const memberCount = allEkskulMembers[index];
-
-                if (['Basket', 'Futsal', 'Voli', 'Badminton', 'Pencak Silat', 'Taekwondo', 'Karate', 'Renang',
-                        'Panahan'
-                    ].includes(name)) {
-                    ekskulGroupCounts[0] += memberCount; // Olahraga
-                } else if (['Paduan Suara', 'Band', 'Tari Tradisional', 'Teater', 'Sinematografi', 'Fotografi']
-                    .includes(name)) {
-                    ekskulGroupCounts[1] += memberCount; // Seni
-                } else if (['Rohis', 'Tahfidz', 'Hadrah'].includes(name)) {
-                    ekskulGroupCounts[2] += memberCount; // Keagamaan
-                } else if (['KIR', 'English Club', 'Japanese Club', 'Jurnalistik', 'Desain Grafis',
-                        'Robotik', 'Broadcasting', 'Karya Ilmiah', 'Matematika', 'Fisika',
-                        'Biologi', 'Kimia', 'Geografi', 'Ekonomi', 'Entrepreneurship', 'IT Club'
-                    ].includes(name)) {
-                    ekskulGroupCounts[3] += memberCount; // Akademik
-                } else {
-                    ekskulGroupCounts[4] += memberCount; // Lainnya (Pramuka, Paskibra, PMR, dll)
-                }
-            });
-
-            var optionsEkskulDonut = {
+            var optionsExtracurricularDonut = {
                 chart: {
                     type: 'donut',
-                    height: 320,
-                    toolbar: {
-                        show: false
-                    }
+                    height: 400,
+                    toolbar: { show: false }
                 },
-                series: ekskulGroupCounts,
-                labels: ekskulGroups,
-                colors: ['#6366F1', '#F97316', '#22C55E', '#0EA5E9', '#A855F7'],
-                dataLabels: {
-                    enabled: true
-                },
+                series: extracurricularGroupCounts,
+                labels: extracurricularGroups,
+                colors: ['#6366F1', '#F97316', '#22C55E', '#0EA5E9', '#A855F7', '#EC4899'],
+                dataLabels: { enabled: true },
                 legend: {
-                    position: 'bottom'
+                    position: 'bottom',
                 },
-                stroke: {
-                    width: 1
-                },
-                responsive: [{
-                    breakpoint: 1024,
-                    options: {
-                        chart: {
-                            height: 280
-                        },
-                        legend: {
-                            position: 'bottom'
+                plotOptions: {
+                    pie: {
+                        donut: {
+                            size: '50%',
                         }
                     }
-                }]
+                },
+                stroke: { width: 1 },
+                responsive: []
             };
 
-            new ApexCharts(document.querySelector("#chart-ekskul"), optionsEkskulDonut).render();
+            new ApexCharts(document.querySelector("#extracurricular-chart"), optionsExtracurricularDonut).render();
 
             // =========================
             // 2. Grafik tambahan: Top 10 ekskul terfavorit (bar chart)
             // =========================
 
             // Sort by anggota desc dan ambil 10 teratas
-            const sorted = allEkskul
-                .map((name, i) => ({
-                    name,
-                    members: allEkskulMembers[i]
-                }))
-                .sort((a, b) => b.members - a.members)
-                .slice(0, 10);
 
-            const topEkskulNames = sorted.map(e => e.name);
-            const topEkskulMembers = sorted.map(e => e.members);
+            const topExtracurricularsNames = @json($topExtracurriculars->pluck('name'));
+            const topExtracurricularsMembers = @json($topExtracurriculars->pluck('count'));
 
-            var optionsEkskulTop = {
+            var optionsExtracurricularTop = {
                 chart: {
                     type: 'bar',
-                    height: 320,
+                    height: 400,
                     toolbar: {
                         show: false
                     }
                 },
                 series: [{
                     name: 'Jumlah Siswa',
-                    data: topEkskulMembers
+                    data: topExtracurricularsMembers
                 }],
                 xaxis: {
-                    categories: topEkskulNames
+                    categories: topExtracurricularsNames
                 },
                 colors: ['#1779FC'],
                 plotOptions: {
@@ -303,7 +250,7 @@
                 }
             };
 
-            new ApexCharts(document.querySelector("#chart-top-ekskul"), optionsEkskulTop).render();
+            new ApexCharts(document.querySelector("#top-extracurricular-chart"), optionsExtracurricularTop).render();
         </script>
     @endpush
 

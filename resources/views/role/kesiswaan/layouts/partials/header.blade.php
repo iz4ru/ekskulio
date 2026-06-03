@@ -20,8 +20,8 @@
                             aria-expanded="false" data-dropdown-toggle="dropdown-user">
                             <span class="sr-only">Open user menu</span>
                             <img class="w-8 h-8 rounded-full"
-                                src="https://ui-avatars.com/api/?name={{ urlencode(Auth::user()->name) }}&background=0083E9&color=fff"
-                                alt="user photo">
+                                src="https://ui-avatars.com/api/?name={{ urlencode(Auth::user()->name) }}&background=8200DB&color=fff"
+                                alt="student affairs avatar">
                         </button>
                     </div>
                     <div class="z-50 hidden my-4 text-base list-none bg-white divide-y divide-gray-100 rounded-sm shadow-sm :bg-gray-700"
@@ -50,12 +50,14 @@
 
                         </div>
                         <ul class="py-1" role="none">
-                            <li>
-                                <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                                    role="menuitem">
-                                    <i class="fa-solid fa-gears mr-2 text-gray-700 hover:bg-gray-100 text-md"></i>
-                                    Pengaturan</a>
-                            </li>
+                            @if (Auth::user()->role === 'kesiswaan')
+                                <li>
+                                    <a href="{{ route('profile.index') }}"
+                                        class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" role="menuitem">
+                                        <i class="fa-solid fa-user mr-2 text-gray-700 hover:bg-gray-100 text-md"></i>
+                                        Profil</a>
+                                </li>
+                            @endif
                             <li>
                                 <form action="{{ route('logout') }}" method="POST"
                                     class="block cursor-pointer px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"

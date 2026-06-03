@@ -92,6 +92,14 @@
                 </x-nav-link>
             </li>
 
+            <!-- Log Aktivitas -->
+            <li>
+                <x-nav-link href="{{ route('logs.index') }}" :active="request()->routeIs(['logs.index', 'logs.detail'])">
+                    <i class="fa-solid fa-clock-rotate-left text-md"></i>
+                    <span class="ml-3">Log Aktivitas</span>
+                </x-nav-link>
+            </li>
+
         </ul>
     </div>
 </aside>

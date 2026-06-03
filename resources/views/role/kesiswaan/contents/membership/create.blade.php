@@ -53,7 +53,8 @@
                 <i class="fa-solid fa-info-circle text-amber-500 mt-0.5"></i>
                 <div>
                     <p class="text-sm text-amber-700">
-                        <strong>Catatan:</strong> Hanya siswa dengan status <span class="font-semibold">AKTIF</span> dan tingkat
+                        <strong>Catatan:</strong> Hanya siswa dengan status <span class="font-semibold">AKTIF</span> dan
+                        tingkat
                         <span class="font-semibold">Kelas X atau XI</span> yang dapat didaftarkan ke ekstrakurikuler.
                         Siswa Kelas XII tidak diperkenankan mengikuti ekstrakurikuler.
                     </p>
@@ -108,12 +109,14 @@
                                         </li>
                                     @endforeach
                                     @if ($extracurriculars->isEmpty())
-                                        <li class="px-4 py-2 text-sm text-gray-500 italic">Tidak ada ekstrakurikuler aktif</li>
+                                        <li class="px-4 py-2 text-sm text-gray-500 italic">Tidak ada ekstrakurikuler aktif
+                                        </li>
                                     @endif
                                 </ul>
                             </div>
 
-                            <input type="hidden" name="extracurricular_id" id="extracurricular_id" value="{{ old('extracurricular_id') }}">
+                            <input type="hidden" name="extracurricular_id" id="extracurricular_id"
+                                value="{{ old('extracurricular_id') }}">
                             <p class="mt-1 text-xs text-gray-500">Pilih ekstrakurikuler yang akan diikuti</p>
                         </div>
 
@@ -169,8 +172,8 @@
                             </label>
 
                             <div class="relative">
-                                <input type="text" name="student_name" id="student_name"
-                                    placeholder="Pilih siswa" autocomplete="off" disabled
+                                <input type="text" name="student_name" id="student_name" placeholder="Pilih siswa"
+                                    autocomplete="off" disabled
                                     class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-md focus:ring-[#0083E9] focus:border-[#0083E9] block w-full p-2.5 pr-10 disabled:bg-gray-100 disabled:text-gray-400"
                                     value="{{ old('student_name') }}" required>
 
@@ -226,7 +229,7 @@
 
     </div>
 
-@push('scripts')
+    @push('scripts')
         <script>
             document.addEventListener('DOMContentLoaded', function() {
                 const extracurricularInput = document.getElementById('extracurricular_name');
@@ -236,7 +239,7 @@
                 const studentClassInput = document.getElementById('student_class');
                 const classDropdown = document.getElementById('class-dropdown');
                 const classIdInput = document.getElementById('class_id');
-                
+
                 const studentNameInput = document.getElementById('student_name');
                 const studentDropdown = document.getElementById('student-dropdown');
                 const studentIdInput = document.getElementById('student_id');
@@ -261,16 +264,19 @@
                     const filtered = ekskuls.filter(e => e.name.toLowerCase().includes(query));
                     const ul = extracurricularDropdown.querySelector('ul');
                     ul.innerHTML = '';
-                    
+
                     if (filtered.length === 0) {
-                        ul.innerHTML = '<li class="px-4 py-2 text-sm text-gray-500 italic">Tidak ada ekstrakurikuler</li>';
+                        ul.innerHTML =
+                            '<li class="px-4 py-2 text-sm text-gray-500 italic">Tidak ada ekstrakurikuler</li>';
                         return;
                     }
 
                     filtered.forEach(e => {
                         const li = document.createElement('li');
-                        const categoryName = e.category ? ` <span class="text-gray-400">(${e.category.name})</span>` : '';
-                        li.innerHTML = `<button type="button" class="extracurricular-option w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-[#0083E9] transition-colors duration-150" data-value="${e.name}" data-id="${e.id}">${e.name}${categoryName}</button>`;
+                        const categoryName = e.category ?
+                            ` <span class="text-gray-400">(${e.category.name})</span>` : '';
+                        li.innerHTML =
+                            `<button type="button" class="extracurricular-option w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-[#0083E9] transition-colors duration-150" data-value="${e.name}" data-id="${e.id}">${e.name}${categoryName}</button>`;
                         ul.appendChild(li);
                     });
                 }
@@ -280,7 +286,7 @@
                     if (btn) {
                         const ekskulName = btn.dataset.value;
                         const ekskulId = btn.dataset.id;
-                        
+
                         extracurricularInput.value = ekskulName;
                         extracurricularIdInput.value = ekskulId;
                     }
@@ -305,7 +311,7 @@
                     const filtered = classes.filter(c => c.name.toLowerCase().includes(query));
                     const ul = classDropdown.querySelector('ul');
                     ul.innerHTML = '';
-                    
+
                     if (filtered.length === 0) {
                         ul.innerHTML = '<li class="px-4 py-2 text-sm text-gray-500 italic">Tidak ada kelas</li>';
                         return;
@@ -313,7 +319,8 @@
 
                     filtered.forEach(c => {
                         const li = document.createElement('li');
-                        li.innerHTML = `<button type="button" class="class-option w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-[#0083E9] transition-colors duration-150" data-value="${c.name}" data-id="${c.id}">${c.name}</button>`;
+                        li.innerHTML =
+                            `<button type="button" class="class-option w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-[#0083E9] transition-colors duration-150" data-value="${c.name}" data-id="${c.id}">${c.name}</button>`;
                         ul.appendChild(li);
                     });
                 }
@@ -323,10 +330,10 @@
                     if (btn) {
                         const className = btn.dataset.value;
                         const classId = btn.dataset.id;
-                        
+
                         studentClassInput.value = className;
                         classIdInput.value = classId;
-                        
+
                         loadStudentsForClass(classId);
                         studentNameInput.disabled = false;
                         studentNameInput.value = '';
@@ -337,25 +344,28 @@
 
                 function loadStudentsForClass(classId) {
                     studentList.innerHTML = '<li class="px-4 py-2 text-sm text-gray-500">Memuat...</li>';
-                    
+
                     fetch(`/memberships/eligible-students?class_id=${classId}`)
                         .then(response => response.json())
                         .then(students => {
                             studentList.innerHTML = '';
-                            
+
                             if (students.length === 0) {
-                                studentList.innerHTML = '<li class="px-4 py-2 text-sm text-gray-500 italic">Tidak ada siswa eligible di kelas ini</li>';
+                                studentList.innerHTML =
+                                    '<li class="px-4 py-2 text-sm text-gray-500 italic">Tidak ada siswa eligible di kelas ini</li>';
                                 return;
                             }
 
                             students.forEach(s => {
                                 const li = document.createElement('li');
-                                li.innerHTML = `<button type="button" class="student-option w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-[#0083E9] transition-colors duration-150" data-id="${s.id}" data-name="${s.name} - ${s.id_number} (Kelas ${s.grade})">${s.name} - ${s.id_number} (Kelas ${s.grade})</button>`;
+                                li.innerHTML =
+                                    `<button type="button" class="student-option w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-[#0083E9] transition-colors duration-150" data-id="${s.id}" data-name="${s.name} - ${s.id_number} (Kelas ${s.grade})">${s.name} - ${s.id_number} (Kelas ${s.grade})</button>`;
                                 studentList.appendChild(li);
                             });
                         })
                         .catch(error => {
-                            studentList.innerHTML = '<li class="px-4 py-2 text-sm text-gray-500 italic">G memuat data</li>';
+                            studentList.innerHTML =
+                                '<li class="px-4 py-2 text-sm text-gray-500 italic">G memuat data</li>';
                         });
                 }
 
@@ -386,15 +396,17 @@
 
                 function renderStudentList(students) {
                     studentList.innerHTML = '';
-                    
+
                     if (students.length === 0) {
-                        studentList.innerHTML = '<li class="px-4 py-2 text-sm text-gray-500 italic">Tidak ada siswa</li>';
+                        studentList.innerHTML =
+                            '<li class="px-4 py-2 text-sm text-gray-500 italic">Tidak ada siswa</li>';
                         return;
                     }
 
                     students.forEach(s => {
                         const li = document.createElement('li');
-                        li.innerHTML = `<button type="button" class="student-option w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-[#0083E9] transition-colors duration-150" data-id="${s.id}" data-name="${s.name} - ${s.id_number} (Kelas ${s.grade})">${s.name} - ${s.id_number} (Kelas ${s.grade})</button>`;
+                        li.innerHTML =
+                            `<button type="button" class="student-option w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-[#0083E9] transition-colors duration-150" data-id="${s.id}" data-name="${s.name} - ${s.id_number} (Kelas ${s.grade})">${s.name} - ${s.id_number} (Kelas ${s.grade})</button>`;
                         studentList.appendChild(li);
                     });
                 }
@@ -404,7 +416,7 @@
                     if (btn) {
                         const sid = btn.dataset.id;
                         const sname = btn.dataset.name;
-                        
+
                         studentNameInput.value = sname;
                         studentIdInput.value = sid;
                     }

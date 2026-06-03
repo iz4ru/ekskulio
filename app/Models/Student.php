@@ -21,6 +21,7 @@ class Student extends Model
         'uuid',
         'name',
         'class_id',
+        'last_class',
         'grade',
         'status',
         'enrollment_year',
