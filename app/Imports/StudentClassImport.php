@@ -2,14 +2,26 @@
 
 namespace App\Imports;
 
+use App\Models\Log;
 use App\Models\StudentClass;
+use App\Models\User;
+use Maatwebsite\Excel\Concerns\SkipsEmptyRows;
 use Maatwebsite\Excel\Concerns\ToModel;
+use Maatwebsite\Excel\Concerns\WithEvents;
 use Maatwebsite\Excel\Concerns\WithHeadingRow;
 use Maatwebsite\Excel\Concerns\WithValidation;
-use Maatwebsite\Excel\Concerns\SkipsEmptyRows;
+use Maatwebsite\Excel\Events\AfterImport;
 
-class StudentClassImport implements ToModel, WithHeadingRow, WithValidation, SkipsEmptyRows
+class StudentClassImport implements ToModel, WithHeadingRow, WithValidation, SkipsEmptyRows, WithEvents
 {
+    protected $importedBy;
+    protected $importedCount = 0;
+
+    public function __construct(?User $importedBy = null)
+    {
+        $this->importedBy = $importedBy;
+    }
+
     /**
     * @param array $row
     *
@@ -18,18 +30,37 @@ class StudentClassImport implements ToModel, WithHeadingRow, WithValidation, Ski
     public function model(array $row)
     {
         $data = [
-            'name' => ucwords(strtoupper($row['kelas'])),
-            'is_active' => isset($row['status']) && strtolower($row['status']) === 'aktif' ? true : false,
+            'name'      => ucwords(strtoupper($row['kelas'])),
+            'is_active' => isset($row['status']) && strtolower($row['status']) === 'aktif',
         ];
-
+ 
         if (isset($row['id']) && !empty($row['id'])) {
             $data['id'] = $row['id'];
         }
-
-        return new StudentClass($data);
+ 
+        $studentClass = new StudentClass($data);
+ 
+        $this->importedCount++;
+ 
+        return $studentClass;
     }
 
-        /**
+    public function registerEvents(): array
+    {
+        return [
+            AfterImport::class => function (AfterImport $event) {
+                if ($this->importedBy && $this->importedCount > 0) {
+                    Log::create([
+                        'user_id'  => $this->importedBy->id,
+                        'activity' => 'Import kelas',
+                        'detail'   => $this->importedBy->name . ' mengimpor ' . $this->importedCount . ' kelas',
+                    ]);
+                }
+            },
+        ];
+    }
+
+    /**
      * Validation Rules
      */
     public function rules(): array

@@ -3,17 +3,29 @@
 namespace App\Imports;
 
 use App\Models\Extracurricular;
-use App\Models\ExtracurricularUser;
-use App\Models\ExtracurricularSchedule;
 use App\Models\ExtracurricularCategory;
+use App\Models\ExtracurricularSchedule;
+use App\Models\ExtracurricularUser;
+use App\Models\Log;
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
+use Maatwebsite\Excel\Concerns\SkipsEmptyRows;
 use Maatwebsite\Excel\Concerns\ToModel;
+use Maatwebsite\Excel\Concerns\WithEvents;
 use Maatwebsite\Excel\Concerns\WithHeadingRow;
 use Maatwebsite\Excel\Concerns\WithValidation;
-use Maatwebsite\Excel\Concerns\SkipsEmptyRows;
+use Maatwebsite\Excel\Events\AfterImport;
 
-class ExtracurricularImport implements ToModel, WithHeadingRow, WithValidation, SkipsEmptyRows
+class ExtracurricularImport implements ToModel, WithHeadingRow, WithValidation, SkipsEmptyRows, WithEvents
 {
+    protected $importedBy;
+    protected $importedCount = 0;
+
+    public function __construct(?User $importedBy = null)
+    {
+        $this->importedBy = $importedBy;
+    }
+
     /**
      * @param array $row
      *
@@ -21,63 +33,76 @@ class ExtracurricularImport implements ToModel, WithHeadingRow, WithValidation, 
      */
     public function model(array $row)
     {
-        // Lookup category_id dari kode_kategori_ekstrakurikuler
-        $categoryId = null;
-        if (!empty($row['kode_kategori_ekstrakurikuler'])) {
-            $category = ExtracurricularCategory::where('code', strtoupper($row['kode_kategori_ekstrakurikuler']))->first();
-            if ($category) {
-                $categoryId = $category->id;
-            }
-        }
-
-        // Lookup user_id dari email_pembina
-        $userId = null;
-        if (!empty($row['email_pembina'])) {
-            $user = User::where('email', $row['email_pembina'])->first();
-            if ($user) {
-                $userId = $user->id;
-            }
-        }
-
-        // Build data ekstrakurikuler
-        $data = [
-            'name' => ucwords(strtolower($row['nama_ekstrakurikuler'])),
-            'code' => strtoupper($row['kode_ekstrakurikuler']),
-            'category_id' => $categoryId,
-            'description' => $row['deskripsi'] ?? null,
-            'award' => (!empty($row['penghargaan']) && $row['penghargaan'] !== '-') ? $row['penghargaan'] : null,
-            'is_active' => isset($row['status']) && strtolower($row['status']) === 'aktif' ? true : false,
-        ];
-
-        if (isset($row['id']) && !empty($row['id'])) {
-            $data['id'] = $row['id'];
-        }
-
-        $extracurricular = Extracurricular::create($data);
-
-        // Assign pembina jika ada
-        if ($userId) {
-            ExtracurricularUser::create([
-                'extracurricular_id' => $extracurricular->id,
-                'user_id' => $userId,
-            ]);
-        }
-
-        // Tambah jadwal (days) - format: "Senin,Rabu,Jumat"
-        if (isset($row['hari']) && !empty($row['hari'])) {
-            $days = array_map('trim', explode(',', $row['hari']));
-            
-            foreach ($days as $day) {
-                if (!empty($day)) {
-                    ExtracurricularSchedule::create([
-                        'extracurricular_id' => $extracurricular->id,
-                        'day' => ucfirst(strtolower($day)),
-                    ]);
+        return DB::transaction(function () use ($row) {
+            $categoryId = null;
+            if (!empty($row['kode_kategori_ekstrakurikuler'])) {
+                $category = ExtracurricularCategory::where('code', strtoupper($row['kode_kategori_ekstrakurikuler']))->first();
+                if ($category) {
+                    $categoryId = $category->id;
                 }
             }
-        }
 
-        return $extracurricular;
+            $userId = null;
+            if (!empty($row['email_pembina'])) {
+                $user = User::where('email', $row['email_pembina'])->first();
+                if ($user) {
+                    $userId = $user->id;
+                }
+            }
+
+            $data = [
+                'name'        => ucwords(strtolower($row['nama_ekstrakurikuler'])),
+                'code'        => strtoupper($row['kode_ekstrakurikuler']),
+                'category_id' => $categoryId,
+                'description' => $row['deskripsi'] ?? null,
+                'award'       => (!empty($row['penghargaan']) && $row['penghargaan'] !== '-') ? $row['penghargaan'] : null,
+                'is_active'   => isset($row['status']) && strtolower($row['status']) === 'aktif',
+            ];
+
+            if (isset($row['id']) && !empty($row['id'])) {
+                $data['id'] = $row['id'];
+            }
+
+            $extracurricular = Extracurricular::create($data);
+
+            if ($userId) {
+                ExtracurricularUser::create([
+                    'extracurricular_id' => $extracurricular->id,
+                    'user_id'            => $userId,
+                ]);
+            }
+
+            if (!empty($row['hari'])) {
+                $days = array_map('trim', explode(',', $row['hari']));
+                foreach ($days as $day) {
+                    if (!empty($day)) {
+                        ExtracurricularSchedule::create([
+                            'extracurricular_id' => $extracurricular->id,
+                            'day'                => ucfirst(strtolower($day)),
+                        ]);
+                    }
+                }
+            }
+
+            $this->importedCount++;
+
+            return $extracurricular;
+        });
+    }
+
+    public function registerEvents(): array
+    {
+        return [
+            AfterImport::class => function (AfterImport $event) {
+                if ($this->importedBy && $this->importedCount > 0) {
+                    Log::create([
+                        'user_id'  => $this->importedBy->id,
+                        'activity' => 'Import ekstrakurikuler',
+                        'detail'   => $this->importedBy->name . ' mengimpor ' . $this->importedCount . ' ekstrakurikuler',
+                    ]);
+                }
+            },
+        ];
     }
 
     /**

@@ -2,12 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Imports\ExtracurricularCategoryImport;
+use App\Models\ExtracurricularCategory;
+use App\Models\Log;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Maatwebsite\Excel\Facades\Excel;
-use App\Models\ExtracurricularCategory;
-use App\Imports\ExtracurricularCategoryImport;
 
 class ExtracurricularCategoryController extends Controller
 {
@@ -118,6 +120,8 @@ class ExtracurricularCategoryController extends Controller
 
     public function store(Request $request)
     {
+        $user = Auth::user();
+
         $validated = $request->validate([
             'category_name' => 'required|string|max:255|unique:extracurricular_categories,name',
             'category_code' => 'required|string|max:10|unique:extracurricular_categories,code',
@@ -131,10 +135,18 @@ class ExtracurricularCategoryController extends Controller
             'category_code.unique' => 'Kode kategori ekstrakurikuler sudah digunakan.',
         ]);
 
-        ExtracurricularCategory::create([
-            'name' => $validated['category_name'],
-            'code' => $validated['category_code'],
-        ]);
+        DB::transaction(function () use ($validated, $user) {
+            ExtracurricularCategory::create([
+                'name' => $validated['category_name'],
+                'code' => $validated['category_code'],
+            ]);
+
+            Log::create([
+                'user_id'  => $user->id,
+                'activity' => 'Tambah kategori ekstrakurikuler',
+                'detail'   => $user->name . ' menambahkan kategori ' . $validated['category_name'] . ' (' . $validated['category_code'] . ')',
+            ]);
+        });
 
         return redirect()->route('extracurricular-category.index')
             ->with('success', 'Kategori ekstrakurikuler ' . $validated['category_name'] . ' berhasil ditambahkan.');
@@ -151,7 +163,7 @@ class ExtracurricularCategoryController extends Controller
         ]);
 
         try {
-            Excel::import(new ExtracurricularCategoryImport, $request->file('upload'));
+            Excel::import(new ExtracurricularCategoryImport(Auth::user()), $request->file('upload'));
 
             return redirect()
                 ->route('extracurricular-category.index')
@@ -183,6 +195,8 @@ class ExtracurricularCategoryController extends Controller
 
     public function update(Request $request, ExtracurricularCategory $extracurricularCategory)
     {
+        $user = Auth::user();
+
         $validated = $request->validate([
             'category_name' => 'required|string|max:255|unique:extracurricular_categories,name,' . $extracurricularCategory->id,
             'category_code' => 'required|string|max:10|unique:extracurricular_categories,code,' . $extracurricularCategory->id,
@@ -196,10 +210,28 @@ class ExtracurricularCategoryController extends Controller
             'category_code.unique' => 'Kode kategori ekstrakurikuler sudah digunakan.',
         ]);
 
-        $extracurricularCategory->update([
-            'name' => $validated['category_name'],
-            'code' => $validated['category_code'],
-        ]);
+        if ($extracurricularCategory->name === $validated['category_name']
+            && $extracurricularCategory->code === $validated['category_code']
+        ) {
+            return redirect()->route('extracurricular-category.index')
+                ->with('success', 'Kategori ekstrakurikuler ' . $validated['category_name'] . ' berhasil diperbarui.');
+        }
+
+        $oldName = $extracurricularCategory->name;
+        $oldCode = $extracurricularCategory->code;
+
+        DB::transaction(function () use ($validated, $extracurricularCategory, $user, $oldName, $oldCode) {
+            $extracurricularCategory->update([
+                'name' => $validated['category_name'],
+                'code' => $validated['category_code'],
+            ]);
+
+            Log::create([
+                'user_id'  => $user->id,
+                'activity' => 'Ubah kategori ekstrakurikuler',
+                'detail'   => $user->name . ' mengubah kategori ' . $oldName . ' (' . $oldCode . ') menjadi ' . $validated['category_name'] . ' (' . $validated['category_code'] . ')',
+            ]);
+        });
 
         return redirect()->route('extracurricular-category.index')
             ->with('success', 'Kategori ekstrakurikuler ' . $validated['category_name'] . ' berhasil diperbarui.');
@@ -207,22 +239,22 @@ class ExtracurricularCategoryController extends Controller
 
     public function destroy(Request $request, ExtracurricularCategory $extracurricularCategory)
     {
+        $user = Auth::user();
+
         $request->validate([
             'password' => 'required',
         ], [
             'password.required' => 'Password wajib diisi untuk menghapus kategori.',
         ]);
 
-        // Cek password
-        if (!Hash::check($request->password, Auth::user()->password)) {
+        if (!Hash::check($request->password, $user->password)) {
             return back()->withErrors([
                 'password' => 'Password yang Anda masukkan salah!'
             ]);
         }
 
-        // Cek apakah kategori memiliki ekstrakurikuler
         $extracurricularCount = $extracurricularCategory->extracurriculars()->count();
-        
+
         if ($extracurricularCount > 0) {
             return back()->withErrors([
                 'category' => 'Kategori tidak dapat dihapus karena masih memiliki ' . $extracurricularCount . ' ekstrakurikuler. Hapus atau pindahkan ekstrakurikuler terlebih dahulu.'
@@ -230,7 +262,17 @@ class ExtracurricularCategoryController extends Controller
         }
 
         $name = $extracurricularCategory->name;
-        $extracurricularCategory->delete();
+        $code = $extracurricularCategory->code;
+
+        DB::transaction(function () use ($user, $extracurricularCategory, $name, $code) {
+            $extracurricularCategory->delete();
+
+            Log::create([
+                'user_id'  => $user->id,
+                'activity' => 'Hapus kategori ekstrakurikuler',
+                'detail'   => $user->name . ' menghapus kategori ' . $name . ' (' . $code . ') (ID: ' . $extracurricularCategory->id . ')',
+            ]);
+        });
 
         return redirect()->route('extracurricular-category.index')
             ->with('success', 'Kategori ekstrakurikuler ' . $name . ' berhasil dihapus.');

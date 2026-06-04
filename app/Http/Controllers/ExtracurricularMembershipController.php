@@ -8,10 +8,12 @@ use App\Enums\StudentStatus;
 use App\Models\AcademicYear;
 use App\Models\Extracurricular;
 use App\Models\ExtracurricularMembership;
+use App\Models\Log;
 use App\Models\Student;
 use App\Models\StudentClass;
 use App\Services\MembershipTransitionService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class ExtracurricularMembershipController extends Controller
@@ -118,27 +120,29 @@ class ExtracurricularMembershipController extends Controller
 
     public function store(Request $request)
     {
+        $user = Auth::user();
+ 
         $request->validate([
-            'student_id' => 'required|exists:students,id',
-            'class_id' => 'required|exists:student_classes,id',
+            'student_id'         => 'required|exists:students,id',
+            'class_id'           => 'required|exists:student_classes,id',
             'extracurricular_id' => 'required|exists:extracurriculars,id',
         ]);
-
-        $student = Student::findOrFail($request->student_id);
+ 
+        $student  = Student::findOrFail($request->student_id);
         $activeAY = AcademicYear::getActiveYear();
-
-        if (! $activeAY) {
+ 
+        if (!$activeAY) {
             return back()->withErrors(['error' => 'Tidak ada tahun ajaran yang aktif.']);
         }
-
-        if (! $student->isEligibleForExtracurricular()) {
+ 
+        if (!$student->isEligibleForExtracurricular()) {
             $reason = $student->grade === StudentGrade::XII->value
                 ? 'Siswa Kelas XII tidak diperkenankan mendaftar ekstrakurikuler.'
                 : 'Status siswa tidak aktif.';
-
+ 
             return back()->withErrors(['student_id' => $reason]);
         }
-
+ 
         if ($this->membershipService->checkDuplicateEnrollment(
             $student->id,
             $request->extracurricular_id,
@@ -146,57 +150,98 @@ class ExtracurricularMembershipController extends Controller
         )) {
             return back()->withErrors(['extracurricular_id' => 'Siswa sudah terdaftar di ekstrakurikuler ini pada tahun ajaran aktif.']);
         }
-
+ 
         $hasOtherActive = ExtracurricularMembership::where('student_id', $student->id)
             ->byAcademicYear($activeAY->id)
             ->active()
             ->exists();
-
+ 
         if ($hasOtherActive) {
             return back()->withErrors(['extracurricular_id' => 'Siswa sudah terdaftar di ekstrakurikuler lain yang masih aktif.']);
         }
-
-        DB::beginTransaction();
-        try {
+ 
+        $extracurricular = Extracurricular::findOrFail($request->extracurricular_id);
+ 
+        DB::transaction(function () use ($user, $student, $extracurricular, $activeAY) {
             ExtracurricularMembership::create([
-                'student_id' => $student->id,
-                'extracurricular_id' => $request->extracurricular_id,
-                'academic_year_id' => $activeAY->id,
-                'status' => MembershipStatus::AKTIF->value,
+                'student_id'         => $student->id,
+                'extracurricular_id' => $extracurricular->id,
+                'academic_year_id'   => $activeAY->id,
+                'status'             => MembershipStatus::AKTIF->value,
             ]);
-
-            DB::commit();
-
-            return redirect()->route('memberships.index')->with('success', 'Siswa berhasil didaftarkan.');
-        } catch (\Exception $e) {
-            DB::rollBack();
-
-            return back()->withErrors(['error' => 'Gagal mendaftarkan siswa: '.$e->getMessage()]);
-        }
+ 
+            Log::create([
+                'user_id'  => $user->id,
+                'activity' => 'Tambah anggota ekstrakurikuler',
+                'detail'   => $user->name . ' mendaftarkan ' . $student->name . ' (NIS: ' . $student->id_number . ') ke ' . $extracurricular->name . ' tahun ajaran ' . $activeAY->year . ' ' . ucfirst($activeAY->semester),
+            ]);
+        });
+ 
+        return redirect()->route('memberships.index')->with('success', 'Siswa berhasil didaftarkan.');
     }
 
     public function updateStatus(Request $request, ExtracurricularMembership $membership)
     {
+        $user = Auth::user();
+ 
         $request->validate([
             'status' => 'required|in:aktif,selesai,drop',
         ]);
-
-        $membership->update(['status' => $request->status]);
-
-        return back()->with('success', 'Status keanggotaan berhasil diubah menjadi '.$request->status.'.');
+ 
+        $oldStatus = $membership->status;
+        $newStatus = $request->status;
+ 
+        if ($oldStatus === $newStatus) {
+            return back()->with('success', 'Status keanggotaan berhasil diubah menjadi ' . $newStatus . '.');
+        }
+ 
+        DB::transaction(function () use ($user, $membership, $oldStatus, $newStatus) {
+            $membership->update(['status' => $newStatus]);
+ 
+            Log::create([
+                'user_id'  => $user->id,
+                'activity' => 'Ubah status keanggotaan',
+                'detail'   => $user->name . ' mengubah status keanggotaan ' . $membership->student->name . ' di ' . $membership->extracurricular->name . ' dari ' . $oldStatus . ' menjadi ' . $newStatus,
+            ]);
+        });
+ 
+        return back()->with('success', 'Status keanggotaan berhasil diubah menjadi ' . $newStatus . '.');
     }
 
     public function destroy(ExtracurricularMembership $membership)
     {
-        if ($membership->presenceDetails()->exists() || $membership->scores()->exists()) {
-            $membership->markAsDropped();
-
-            return redirect()->route('memberships.index')
-                ->with('success', 'Keanggotaan ditandai sebagai drop (data kehadiran/nilai masih dipertahankan).');
-        }
-
-        $membership->delete();
-
-        return redirect()->route('memberships.index')->with('success', 'Data keanggotaan dihapus.');
+        $user            = Auth::user();
+        $studentName     = $membership->student->name;
+        $studentNis      = $membership->student->id_number;
+        $extracurricular = $membership->extracurricular->name;
+ 
+        DB::transaction(function () use ($user, $membership, $studentName, $studentNis, $extracurricular) {
+            if ($membership->presenceDetails()->exists() || $membership->scores()->exists()) {
+                $membership->markAsDropped();
+ 
+                Log::create([
+                    'user_id'  => $user->id,
+                    'activity' => 'Drop keanggotaan ekstrakurikuler',
+                    'detail'   => $user->name . ' men-drop keanggotaan ' . $studentName . ' (NIS: ' . $studentNis . ') dari ' . $extracurricular . ' (data kehadiran/nilai dipertahankan)',
+                ]);
+            } else {
+                $membership->delete();
+ 
+                Log::create([
+                    'user_id'  => $user->id,
+                    'activity' => 'Hapus keanggotaan ekstrakurikuler',
+                    'detail'   => $user->name . ' menghapus keanggotaan ' . $studentName . ' (NIS: ' . $studentNis . ') dari ' . $extracurricular,
+                ]);
+            }
+        });
+ 
+        $wasDropped = !$membership->exists || $membership->status === MembershipStatus::DROP->value;
+ 
+        return redirect()->route('memberships.index')->with(
+            'success',
+            $wasDropped
+                ? 'Keanggotaan ditandai sebagai drop (data kehadiran/nilai masih dipertahankan).'
+                : 'Data keanggotaan dihapus.'
+        );
     }
 }

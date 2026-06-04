@@ -53,7 +53,7 @@ class Presence extends Model
         return $this->hasMany(PresenceDetail::class, 'presence_id');
     }
 
-    // ✅ Helper: Hitung statistik
+    // Hitung statistik
     public function getPresentCountAttribute()
     {
         return $this->details()->where('status', 'present')->count();

@@ -78,27 +78,28 @@
                                 class="hover:bg-gray-100 transition-colors transition-duration-300 border-b border-gray-200">
                                 <td class="px-4 py-3 border-gray-200">{{ $loop->iteration }}</td>
                                 <td class="px-4 py-3 font-semibold whitespace-nowrap border-gray-200">
-                                    {{ \Carbon\Carbon::parse($log->created_at)->locale('id')->translatedFormat('l d/m/y, H:i') }}
+                                    {{ \Carbon\Carbon::parse($log->created_at)->locale('id')->translatedFormat('l, d/m/y, H:i:s') }}
                                 </td>
-                                <td
-                                    class="px-4 py-3 font-medium whitespace-nowrap border-gray-200 flex flex-row items-center gap-2">
-                                    @if ($log->user->role === 'admin')
-                                        <img class="w-6 h-6 rounded-full"
-                                            src="https://ui-avatars.com/api/?name={{ urlencode($log->user->name) }}&background=008236&color=fff"
-                                            alt="admin avatar">
-                                    @elseif ($log->user->role === 'pembina')
-                                        <img class="w-6 h-6 rounded-full"
-                                            src="https://ui-avatars.com/api/?name={{ urlencode($log->user->name) }}&background=0083E9&color=fff"
-                                            alt="advisor avatar">
-                                    @else
-                                        <img class="w-6 h-6 rounded-full"
-                                            src="https://ui-avatars.com/api/?name={{ urlencode($log->user->name) }}&background=8200DB&color=fff"
-                                            alt="student affairs avatar">
-                                    @endif
-                                    <span class="text-gray-200">
-                                        |
-                                    </span>
-                                    {{ $log->user->name }}
+                                <td class="px-4 py-3 font-medium whitespace-nowrap border-gray-200">
+                                    <div class="flex flex-row items-center justify-center gap-2">
+                                        @if ($log->user->role === 'admin')
+                                            <img class="w-6 h-6 rounded-full"
+                                                src="https://ui-avatars.com/api/?name={{ urlencode($log->user->name) }}&background=008236&color=fff"
+                                                alt="admin avatar">
+                                        @elseif ($log->user->role === 'pembina')
+                                            <img class="w-6 h-6 rounded-full"
+                                                src="https://ui-avatars.com/api/?name={{ urlencode($log->user->name) }}&background=0083E9&color=fff"
+                                                alt="advisor avatar">
+                                        @else
+                                            <img class="w-6 h-6 rounded-full"
+                                                src="https://ui-avatars.com/api/?name={{ urlencode($log->user->name) }}&background=8200DB&color=fff"
+                                                alt="student affairs avatar">
+                                        @endif
+                                        <span class="text-gray-200">
+                                            |
+                                        </span>
+                                        {{ $log->user->name }}
+                                    </div>
                                 </td>
                                 <td class="px-4 py-3 font-medium whitespace-nowrap border-gray-200 flex-wrap">
                                     @if ($log->user->role === 'admin')
@@ -121,8 +122,22 @@
                                 <td class="px-4 py-3 font-medium whitespace-nowrap border-gray-200">
                                     {{ $log->activity }}
                                 </td>
-                                <td class="px-4 py-3 font-medium whitespace-nowrap border-gray-200">
-                                    {{ $log->detail }}
+                                <td class="px-4 py-3 border-gray-200">
+                                    <div class="max-w-[240px] sm:max-w-xs lg:max-w-md">
+                                        <p class="text-sm text-gray-700 leading-relaxed line-clamp-2 break-words">
+                                            {{ Str::limit($log->detail, 130) }}
+                                        </p>
+
+                                        @if (strlen($log->detail) > 130)
+                                            <button
+                                                class="detail-btn text-[#0083E9] hover:text-[#0066b3] text-xs font-medium mt-1 flex items-center gap-1 hover:underline cursor-pointer px-2"
+                                                data-detail="{{ addslashes($log->detail) }}"
+                                                data-created="{{ \Carbon\Carbon::parse($log->created_at)->locale('id')->translatedFormat('l, d/m/y, H:i:s') }}">
+                                                Lihat selengkapnya
+                                                <i class="fa-solid fa-arrow-right text-xs"></i>
+                                            </button>
+                                        @endif
+                                    </div>
                                 </td>
                         @endforeach
                     </tbody>
@@ -137,5 +152,37 @@
 
         </div>
     </div>
+
+    @push('scripts')
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+
+                document.addEventListener('click', function(e) {
+                    const detailBtn = e.target.closest('.detail-btn');
+
+                    if (detailBtn) {
+                        e.preventDefault();
+
+                        const detail = detailBtn.getAttribute('data-detail');
+                        const createdAt = detailBtn.getAttribute('data-created');
+
+                        Swal.fire({
+                            title: 'Detail Log',
+                            html: `
+                <textarea
+                    readonly
+                    class="w-full h-60 text-sm text-gray-700 leading-relaxed border border-gray-200 rounded-lg p-3 resize-none focus:outline-none bg-gray-50"
+                >[${createdAt}] ${detail}</textarea>
+            `,
+                            showConfirmButton: false,
+                            showCloseButton: true,
+                            width: '36rem',
+                        });
+                    }
+                });
+
+            });
+        </script>
+    @endpush
 
 @endsection

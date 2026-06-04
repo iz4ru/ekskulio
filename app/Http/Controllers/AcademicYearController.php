@@ -4,10 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Exports\ActiveStudentExport;
 use App\Models\AcademicYear;
+use App\Models\Log;
 use App\Models\StudentClass;
 use App\Services\AcademicYearClosureService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Maatwebsite\Excel\Facades\Excel;
 
@@ -57,13 +59,13 @@ class AcademicYearController extends Controller
 
     public function store(Request $request)
     {
+        $user = Auth::user();
+
         $validated = $request->validate(
             [
                 'year-start' => 'required|integer|min:2000|max:2099',
                 'year-end' => 'required|integer|min:2000|max:2099|gt:year-start',
                 'semester' => 'required|in:Ganjil,Genap',
-                'status' => 'nullable|boolean',
-                'password' => 'required_if:status,1',
             ],
             [
                 'year-start.required' => 'Tahun ajaran awal wajib diisi',
@@ -77,7 +79,6 @@ class AcademicYearController extends Controller
                 'year-end.gt' => 'Tahun ajaran akhir harus lebih besar dari tahun awal',
                 'semester.required' => 'Semester wajib dipilih',
                 'semester.in' => 'Semester harus Ganjil atau Genap',
-                'password.required_if' => 'Password wajib diisi untuk mengaktifkan status',
             ],
         );
 
@@ -85,14 +86,6 @@ class AcademicYearController extends Controller
             return back()
                 ->withErrors(['year-end' => 'Tahun ajaran akhir harus tepat 1 tahun setelah tahun awal'])
                 ->withInput();
-        }
-
-        if ($request->has('status') && $request->status) {
-            if (!Hash::check($request->password, Auth::user()->password)) {
-                return back()
-                    ->withErrors(['password' => 'Password yang Anda masukkan salah!'])
-                    ->withInput();
-            }
         }
 
         $academicYear = $validated['year-start'] . '/' . $validated['year-end'];
@@ -106,15 +99,18 @@ class AcademicYearController extends Controller
                 ->withInput();
         }
 
-        if ($request->has('status') && $request->status) {
-            AcademicYear::where('is_active', true)->update(['is_active' => false]);
-        }
+        DB::transaction(function () use ($user, $academicYear, $semester) {
+            AcademicYear::create([
+                'year' => $academicYear,
+                'semester' => $semester,
+            ]);
 
-        AcademicYear::create([
-            'year' => $academicYear,
-            'semester' => $semester,
-            'is_active' => $request->has('status') ? true : false,
-        ]);
+            Log::create([
+                'user_id' => $user->id,
+                'activity' => 'Tambah tahun ajaran',
+                'detail' => $user->name . ' menambahkan tahun ajaran ' . $academicYear . ' - ' . ucfirst($semester),
+            ]);
+        });
 
         return redirect()
             ->route('academic-years.index')
@@ -128,6 +124,7 @@ class AcademicYearController extends Controller
 
     public function update(Request $request, $id)
     {
+        $user = Auth::user();
         $academicYear = AcademicYear::findOrFail($id);
 
         $validated = $request->validate(
@@ -138,8 +135,16 @@ class AcademicYearController extends Controller
             ],
             [
                 'year-start.required' => 'Tahun ajaran awal wajib diisi',
+                'year-start.integer' => 'Tahun ajaran awal harus berupa angka',
+                'year-start.min' => 'Tahun ajaran awal minimal 2000',
+                'year-start.max' => 'Tahun ajaran awal maksimal 2099',
                 'year-end.required' => 'Tahun ajaran akhir wajib diisi',
+                'year-end.integer' => 'Tahun ajaran akhir harus berupa angka',
+                'year-end.min' => 'Tahun ajaran akhir minimal 2000',
+                'year-end.max' => 'Tahun ajaran akhir maksimal 2099',
+                'year-end.gt' => 'Tahun ajaran akhir harus lebih besar dari tahun awal',
                 'semester.required' => 'Semester wajib dipilih',
+                'semester.in' => 'Semester harus Ganjil atau Genap',
             ],
         );
 
@@ -152,7 +157,10 @@ class AcademicYearController extends Controller
         $newAcademicYear = $validated['year-start'] . '/' . $validated['year-end'];
         $semester = strtolower($validated['semester']);
 
-        $exists = AcademicYear::where('year', $newAcademicYear)->where('semester', $semester)->where('id', '!=', $id)->exists();
+        $exists = AcademicYear::where('year', $newAcademicYear)
+            ->where('semester', $semester)
+            ->where('id', '!=', $id)
+            ->exists();
 
         if ($exists) {
             return back()
@@ -160,11 +168,30 @@ class AcademicYearController extends Controller
                 ->withInput();
         }
 
-        $academicYear->update([
-            'year' => $newAcademicYear,
-            'semester' => $semester,
-            'is_active' => $request->has('status') ? true : false,
-        ]);
+        if ($academicYear->year === $newAcademicYear && $academicYear->semester === $semester) {
+            return redirect()
+                ->route('academic-years.index')
+                ->with('success', 'Tahun ajaran ' . $newAcademicYear . ' berhasil diperbarui!');
+        }
+
+        // Simpan data lama untuk detail log
+        $oldYear     = $academicYear->year;
+        $oldSemester = $academicYear->semester;
+        $oldAyName = $oldYear . ' - ' . ucfirst($oldSemester);
+        $newAyName  = $newAcademicYear . ' - ' . ucfirst($semester);
+
+        DB::transaction(function () use ($user, $academicYear, $newAcademicYear, $semester, $newAyName, $oldAyName) {
+            $academicYear->update([
+                'year'      => $newAcademicYear,
+                'semester'  => $semester,
+            ]);
+
+            Log::create([
+                'user_id'  => $user->id,
+                'activity' => 'Ubah tahun ajaran',
+                'detail'   => $user->name . ' mengubah tahun ajaran ' . $oldAyName . ' menjadi ' . $newAyName,
+            ]);
+        });
 
         return redirect()
             ->route('academic-years.index')
@@ -173,6 +200,8 @@ class AcademicYearController extends Controller
 
     public function destroy(AcademicYear $academicYear, Request $request)
     {
+        $user = Auth::user();
+
         if (!Hash::check($request->password, Auth::user()->password)) {
             return redirect()
                 ->route('academic-years.index')
@@ -185,7 +214,20 @@ class AcademicYearController extends Controller
                 ->withErrors(['error' => 'Tahun ajaran tidak bisa dihapus karena sedang aktif.']);
         }
 
-        $academicYear->delete();
+        $year = $academicYear->year;
+        $semester = $academicYear->semester;
+        $ayName = $year . ' - ' . ucfirst($semester);
+
+        DB::transaction(function () use ($user, $academicYear, $ayName) {
+            $academicYear->delete();
+
+            Log::create([
+                'user_id' => $user->id,
+                'activity' => 'Hapus tahun ajaran',
+                'detail' => $user->name . ' menghapus tahun ajaran ' . $ayName . ' (ID: ' . $academicYear->id . ')',
+            ]);
+        });
+
 
         return redirect()->route('academic-years.index')->with('success', 'Tahun ajaran berhasil dihapus!');
     }
@@ -290,6 +332,8 @@ class AcademicYearController extends Controller
 
         $classMappings = $request->input('class_mappings', []);
         $results = $this->closureService->close($currentAY, $targetAY, $classMappings);
+
+        // Log activity record ada di closure service \Services\AcademicYearClosureService
 
         $msg = $results['type'] === 'academic_year' ? "Tahun ajaran berhasil ditutup. {$results['graduated_students']} siswa lulus, {$results['promoted_students']} naik kelas, {$results['closed_memberships']} keanggotaan diarsipkan." : "Semester berhasil ditutup. {$results['closed_memberships']} keanggotaan diarsipkan. Grade siswa tetap.";
 

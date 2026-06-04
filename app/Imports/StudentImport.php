@@ -10,20 +10,26 @@ use App\Models\Extracurricular;
 use App\Models\ExtracurricularMembership;
 use App\Models\Student;
 use App\Models\StudentClass;
+use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Maatwebsite\Excel\Concerns\SkipsEmptyRows;
 use Maatwebsite\Excel\Concerns\ToModel;
+use Maatwebsite\Excel\Concerns\WithEvents;
 use Maatwebsite\Excel\Concerns\WithHeadingRow;
 use Maatwebsite\Excel\Concerns\WithValidation;
+use Maatwebsite\Excel\Events\AfterImport;
 
-class StudentImport implements SkipsEmptyRows, ToModel, WithHeadingRow, WithValidation
+class StudentImport implements SkipsEmptyRows, ToModel, WithHeadingRow, WithValidation, WithEvents
 {
     protected $defaultClassId;
+    protected $importedBy;
+    protected $importedCount = 0;
 
-    public function __construct($defaultClassId = null)
+    public function __construct($defaultClassId = null, ?User $importedBy = null)
     {
         $this->defaultClassId = $defaultClassId;
+        $this->importedBy = $importedBy;
     }
 
     /**
@@ -45,36 +51,28 @@ class StudentImport implements SkipsEmptyRows, ToModel, WithHeadingRow, WithVali
 
     public function model(array $row)
     {
-        // 1. Handle Kelas (Auto-create jika belum ada)
         $classId = null;
-        
-        // PRIORITAS 1: Jika admin isi 'kelas_tujuan', gunakan itu (override)
+ 
         if (isset($row['kelas_tujuan']) && !empty($row['kelas_tujuan']) && $row['kelas_tujuan'] !== '-') {
             $targetClassName = ucwords(strtoupper(trim($row['kelas_tujuan'])));
-            $targetClass = StudentClass::firstOrCreate(
+            $targetClass     = StudentClass::firstOrCreate(
                 ['name' => $targetClassName],
                 ['name' => $targetClassName, 'is_active' => true]
             );
             $classId = $targetClass->id;
-        } 
-        // PRIORITAS 2: Jika tidak, gunakan kolom 'kelas' seperti biasa
-        elseif (isset($row['kelas']) && !empty($row['kelas']) && $row['kelas'] !== '-') {
-            $className = ucwords(strtoupper(trim($row['kelas'])));
+        } elseif (isset($row['kelas']) && !empty($row['kelas']) && $row['kelas'] !== '-') {
+            $className    = ucwords(strtoupper(trim($row['kelas'])));
             $studentClass = StudentClass::firstOrCreate(
                 ['name' => $className],
                 ['name' => $className, 'is_active' => true]
             );
             $classId = $studentClass->id;
-        } 
-        // PRIORITAS 3: Fallback ke default class ID jika ada
-        elseif ($this->defaultClassId) {
+        } elseif ($this->defaultClassId) {
             $classId = $this->defaultClassId;
         }
-
-        // 2. Hitung Grade (dengan atau tanpa override tingkat)
+ 
         $grade = $this->calculateGrade((int) $row['tahun_masuk'], $row['tingkat'] ?? null);
-
-        // 3. Prepare data siswa
+ 
         $studentData = [
             'name'            => ucwords(strtoupper($row['nama_lengkap'])),
             'class_id'        => $classId,
@@ -83,32 +81,28 @@ class StudentImport implements SkipsEmptyRows, ToModel, WithHeadingRow, WithVali
             'enrollment_year' => (int) $row['tahun_masuk'],
             'award'           => !empty($row['penghargaan']) && $row['penghargaan'] !== '-' ? $row['penghargaan'] : null,
         ];
-
-        // 4. Upsert dalam transaction (support update siswa existing)
+ 
         return DB::transaction(function () use ($row, $studentData) {
-            // Cek apakah siswa sudah ada berdasarkan NIS
+            $isNew   = false;
             $student = Student::where('id_number', $row['nis'])->first();
-
+ 
             if ($student) {
-                // UPDATE siswa existing
                 $student->update($studentData);
             } else {
-                // CREATE siswa baru
                 $studentData['id_number'] = $row['nis'];
                 $student = Student::create($studentData);
+                $isNew   = true;
             }
-
-            // 5. Handle kode_ekstrakurikuler → auto-create membership
+ 
             if (!empty($row['kode_ekstrakurikuler']) && $row['kode_ekstrakurikuler'] !== '-' && $row['kode_ekstrakurikuler'] !== '') {
                 $activeAY = AcademicYear::getActiveYear();
-                
+ 
                 if ($activeAY) {
                     $ekskul = Extracurricular::where('code', $row['kode_ekstrakurikuler'])
                         ->where('is_active', true)
                         ->first();
-
+ 
                     if ($ekskul) {
-                        // Upsert membership
                         ExtracurricularMembership::updateOrCreate(
                             [
                                 'student_id'         => $student->id,
@@ -118,14 +112,30 @@ class StudentImport implements SkipsEmptyRows, ToModel, WithHeadingRow, WithVali
                             ['status' => MembershipStatus::AKTIF->value]
                         );
                     } else {
-                        // Graceful fallback: siswa tetap masuk, membership skip + log warning
                         Log::warning("Kode ekstrakurikuler '{$row['kode_ekstrakurikuler']}' tidak ditemukan atau tidak aktif untuk NIS {$row['nis']}.");
                     }
                 }
             }
-
+ 
+            $this->importedCount++;
+ 
             return $student;
         });
+    }
+
+    public function registerEvents(): array
+    {
+        return [
+            AfterImport::class => function (AfterImport $event) {
+                if ($this->importedBy && $this->importedCount > 0) {
+                    \App\Models\Log::create([
+                        'user_id'  => $this->importedBy->id,
+                        'activity' => 'Import siswa',
+                        'detail'   => $this->importedBy->name . ' mengimpor ' . $this->importedCount . ' siswa',
+                    ]);
+                }
+            },
+        ];
     }
 
     /**

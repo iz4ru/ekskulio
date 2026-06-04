@@ -15,17 +15,14 @@ class AuthController extends Controller
 
     public function login(Request $request)
     {
-        // 1. Validasi input
         $request->validate([
-            'login' => ['required', 'string'], // 1 field: email / username
+            'login' => ['required', 'string'],
             'password' => ['required', 'string'],
         ]);
 
-        // 2. Tentukan apakah ini email atau username
         $loginValue = $request->input('login');
         $loginField = filter_var($loginValue, FILTER_VALIDATE_EMAIL) ? 'email' : 'username';
 
-        // 3. Ambil user dulu (untuk cek is_active & pesan error spesifik)
         $user = User::where($loginField, $loginValue)->first();
 
         if (!$user) {
@@ -44,7 +41,6 @@ class AuthController extends Controller
                 ->onlyInput('login');
         }
 
-        // 4. Attempt login dengan field dinamis
         $credentials = [
             $loginField => $loginValue,
             'password' => $request->password,

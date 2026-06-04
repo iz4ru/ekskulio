@@ -3,13 +3,25 @@
 namespace App\Imports;
 
 use App\Models\ExtracurricularCategory;
+use App\Models\Log;
+use App\Models\User;
+use Maatwebsite\Excel\Concerns\SkipsEmptyRows;
 use Maatwebsite\Excel\Concerns\ToModel;
+use Maatwebsite\Excel\Concerns\WithEvents;
 use Maatwebsite\Excel\Concerns\WithHeadingRow;
 use Maatwebsite\Excel\Concerns\WithValidation;
-use Maatwebsite\Excel\Concerns\SkipsEmptyRows;
+use Maatwebsite\Excel\Events\AfterImport;
 
-class ExtracurricularCategoryImport implements ToModel, WithHeadingRow, WithValidation, SkipsEmptyRows
+class ExtracurricularCategoryImport implements ToModel, WithHeadingRow, WithValidation, SkipsEmptyRows, WithEvents
 {
+    protected $importedBy;
+    protected $importedCount = 0;
+
+    public function __construct(?User $importedBy = null)
+    {
+        $this->importedBy = $importedBy;
+    }
+
     /**
     * @param array $row
     *
@@ -21,12 +33,31 @@ class ExtracurricularCategoryImport implements ToModel, WithHeadingRow, WithVali
             'name' => ucwords(strtolower($row['nama_kategori'])),
             'code' => strtoupper($row['kode_kategori']),
         ];
-
+ 
         if (isset($row['id']) && !empty($row['id'])) {
             $data['id'] = $row['id'];
         }
+ 
+        $category = new ExtracurricularCategory($data);
+ 
+        $this->importedCount++;
+ 
+        return $category;
+    }
 
-        return new ExtracurricularCategory($data);
+    public function registerEvents(): array
+    {
+        return [
+            AfterImport::class => function (AfterImport $event) {
+                if ($this->importedBy && $this->importedCount > 0) {
+                    Log::create([
+                        'user_id'  => $this->importedBy->id,
+                        'activity' => 'Import kategori ekstrakurikuler',
+                        'detail'   => $this->importedBy->name . ' mengimpor ' . $this->importedCount . ' kategori ekstrakurikuler',
+                    ]);
+                }
+            },
+        ];
     }
 
     /**

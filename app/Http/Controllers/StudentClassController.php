@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Imports\StudentClassImport;
+use App\Models\Log;
 use App\Models\StudentClass;
 use Illuminate\Http\Request;
-use App\Imports\StudentClassImport;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Maatwebsite\Excel\Facades\Excel;
 
@@ -39,20 +41,28 @@ class StudentClassController extends Controller
 
     public function store(Request $request)
     {
+        $user = Auth::user();
+
         $validated = $request->validate(
-            [
-                'class_name' => 'required|string|max:255|unique:student_classes,name',
-            ],
+            ['class_name' => 'required|string|max:255|unique:student_classes,name'],
             [
                 'class_name.required' => 'Nama kelas wajib diisi',
-                'class_name.unique' => 'Nama kelas sudah digunakan',
+                'class_name.unique'   => 'Nama kelas sudah digunakan',
             ],
         );
 
-        StudentClass::create([
-            'name' => $validated['class_name'],
-            'is_active' => $request->has('is_active') ? true : false,
-        ]);
+        DB::transaction(function () use ($validated, $request, $user) {
+            $class = StudentClass::create([
+                'name'      => $validated['class_name'],
+                'is_active' => $request->has('is_active'),
+            ]);
+
+            Log::create([
+                'user_id'  => $user->id,
+                'activity' => 'Tambah kelas',
+                'detail'   => $user->name . ' menambahkan kelas ' . $class->name,
+            ]);
+        });
 
         return redirect()
             ->route('student-class.index')
@@ -70,7 +80,7 @@ class StudentClassController extends Controller
         ]);
 
         try {
-            Excel::import(new StudentClassImport, $request->file('upload'));
+            Excel::import(new StudentClassImport(Auth::user()), $request->file('upload'));
 
             return redirect()
                 ->route('student-class.index')
@@ -101,19 +111,33 @@ class StudentClassController extends Controller
 
     public function update(Request $request, StudentClass $studentClass)
     {
+        $user = Auth::user();
+
         $validated = $request->validate(
-            [
-                'class_name' => 'required|string|max:255|unique:student_classes,name,' . $studentClass->id,
-            ],
+            ['class_name' => 'required|string|max:255|unique:student_classes,name,' . $studentClass->id],
             [
                 'class_name.required' => 'Nama kelas wajib diisi',
-                'class_name.unique' => 'Nama kelas sudah digunakan',
+                'class_name.unique'   => 'Nama kelas sudah digunakan',
             ],
         );
 
-        $studentClass->update([
-            'name' => $validated['class_name'],
-        ]);
+        if ($studentClass->name === $validated['class_name']) {
+            return redirect()
+                ->route('student-class.index')
+                ->with('success', 'Kelas ' . $validated['class_name'] . ' berhasil diperbarui!');
+        }
+
+        $oldName = $studentClass->name;
+
+        DB::transaction(function () use ($validated, $studentClass, $user, $oldName) {
+            $studentClass->update(['name' => $validated['class_name']]);
+
+            Log::create([
+                'user_id'  => $user->id,
+                'activity' => 'Ubah kelas',
+                'detail'   => $user->name . ' mengubah kelas ' . $oldName . ' menjadi ' . $validated['class_name'],
+            ]);
+        });
 
         return redirect()
             ->route('student-class.index')
@@ -122,27 +146,18 @@ class StudentClassController extends Controller
 
     public function destroy(Request $request, StudentClass $studentClass)
     {
-        // Validasi password
+        $user = Auth::user();
+
         $request->validate(
-            [
-                'password' => 'required',
-            ],
-            [
-                'password.required' => 'Password wajib diisi untuk menghapus kelas.',
-            ],
+            ['password' => 'required'],
+            ['password.required' => 'Password wajib diisi untuk menghapus kelas.'],
         );
 
-        // Cek password
-        if (!Hash::check($request->password, Auth::user()->password)) {
-            return back()->withErrors([
-                'password' => 'Password yang Anda masukkan salah!',
-            ]);
+        if (!Hash::check($request->password, $user->password)) {
+            return back()->withErrors(['password' => 'Password yang Anda masukkan salah!']);
         }
 
-        // ✅ FIX: Simpan nama dulu sebelum cek students
-        $name = $studentClass->name;
-
-        // Cek apakah kelas masih punya siswa
+        $name         = $studentClass->name;
         $studentCount = $studentClass->students()->count();
 
         if ($studentCount > 0) {
@@ -151,8 +166,15 @@ class StudentClassController extends Controller
             ]);
         }
 
-        // Hapus kelas
-        $studentClass->delete();
+        DB::transaction(function () use ($studentClass, $user, $name) {
+            $studentClass->delete();
+
+            Log::create([
+                'user_id'  => $user->id,
+                'activity' => 'Hapus kelas',
+                'detail'   => $user->name . ' menghapus kelas ' . $name . ' (ID: ' . $studentClass->id . ')',
+            ]);
+        });
 
         return redirect()
             ->route('student-class.index')
@@ -161,19 +183,28 @@ class StudentClassController extends Controller
 
     public function toggleActive(StudentClass $studentClass, Request $request)
     {
-        // Validasi password
-        if (!Hash::check($request->password, Auth::user()->password)) {
+        $user = Auth::user();
+
+        if (!Hash::check($request->password, $user->password)) {
             return redirect()
                 ->route('student-class.index')
                 ->withErrors(['error' => 'Password yang anda masukkan salah!']);
         }
 
-        // Toggle status
-        $studentClass->update([
-            'is_active' => !$studentClass->is_active,
-        ]);
+        DB::transaction(function () use ($studentClass, $user) {
+            $studentClass->update(['is_active' => !$studentClass->is_active]);
+
+            $status = $studentClass->is_active ? 'mengaktifkan' : 'menonaktifkan';
+
+            Log::create([
+                'user_id'  => $user->id,
+                'activity' => 'Toggle status kelas',
+                'detail'   => $user->name . ' ' . $status . ' kelas ' . $studentClass->name,
+            ]);
+        });
 
         $status = $studentClass->is_active ? 'diaktifkan' : 'dinonaktifkan';
+
         return redirect()
             ->route('student-class.index')
             ->with('success', "Kelas {$studentClass->name} berhasil {$status}!");

@@ -9,6 +9,7 @@ use App\Models\AcademicYear;
 use App\Models\ExtracurricularMembership;
 use App\Models\Student;
 use App\Models\StudentClass;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -122,6 +123,8 @@ class AcademicYearClosureService
      */
     public function close(AcademicYear $closingYear, AcademicYear $targetYear, array $classMappings = []): array
     {
+        $user = Auth::user();
+
         $isYearChange = $closingYear->year !== $targetYear->year;
 
         return DB::transaction(function () use ($closingYear, $targetYear, $isYearChange, $classMappings): array {
@@ -187,6 +190,14 @@ class AcademicYearClosureService
                 'from' => $closingYear->year . ' ' . $closingYear->semester,
                 'to' => $targetYear->year . ' ' . $targetYear->semester,
                 'results' => $results,
+            ]);
+
+            \App\Models\Log::create([
+                'user_id'  => $user->id,
+                'activity' => 'Penutupan tahun ajaran',
+                'detail'   => $user->name . ' menutup tahun ajaran '
+                            . $closingYear->year . ' - ' . ucfirst($closingYear->semester)
+                            . ' ke ' . $targetYear->year . ' - ' . ucfirst($targetYear->semester),
             ]);
 
             return $results;

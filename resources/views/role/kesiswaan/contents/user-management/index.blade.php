@@ -128,12 +128,25 @@
                                 </td>
                                 <td class="px-4 py-3 font-medium whitespace-nowrap border-gray-200">
                                     @if ($user->extracurriculars->count() > 0)
-                                        @foreach ($user->extracurriculars as $item)
+                                        @php
+                                            $ekskuls = $user->extracurriculars;
+                                            $total = $ekskuls->count();
+                                            $limit = 3;
+                                        @endphp
+
+                                        @foreach ($ekskuls->take($limit) as $item)
                                             <span
                                                 class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#0083E9]/10 text-[#0083E9]">
                                                 {{ $item->extracurricular->name }}
                                             </span>
                                         @endforeach
+
+                                        @if ($total > $limit)
+                                            <span
+                                                class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+                                                +{{ $total - $limit }} lainnya
+                                            </span>
+                                        @endif
                                     @elseif($user->role === 'pembina')
                                         <span class="text-gray-400 italic">Belum mengampu ekstrakurikuler</span>
                                     @else

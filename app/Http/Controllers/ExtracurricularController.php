@@ -8,10 +8,12 @@ use App\Models\Extracurricular;
 use App\Models\ExtracurricularCategory;
 use App\Models\ExtracurricularSchedule;
 use App\Models\ExtracurricularUser;
+use App\Models\Log;
 use App\Models\Student;
 use Illuminate\Foundation\Auth\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Maatwebsite\Excel\Facades\Excel;
 
@@ -145,55 +147,67 @@ class ExtracurricularController extends Controller
 
     public function store(Request $request)
     {
+        $user = Auth::user();
+ 
         $validated = $request->validate(
             [
                 'extracurricular_name' => 'required|string|max:255',
                 'extracurricular_code' => 'required|string|max:50|unique:extracurriculars,code',
-                'category_id' => 'required|exists:extracurricular_categories,id',
-                'user_id' => 'required|exists:users,id',
-                'days' => 'required|array|min:1',
-                'days.*' => 'in:Senin,Selasa,Rabu,Kamis,Jumat,Sabtu,Minggu',
-                'description' => 'nullable|string',
-                'award' => 'nullable|string',
-                'status' => 'nullable|boolean',
+                'category_id'          => 'required|exists:extracurricular_categories,id',
+                'user_id'              => 'required|exists:users,id',
+                'days'                 => 'required|array|min:1',
+                'days.*'               => 'in:Senin,Selasa,Rabu,Kamis,Jumat,Sabtu,Minggu',
+                'description'          => 'nullable|string',
+                'award'                => 'nullable|string',
+                'status'               => 'nullable|boolean',
             ],
             [
                 'extracurricular_name.required' => 'Nama ekstrakurikuler wajib diisi',
                 'extracurricular_code.required' => 'Kode ekstrakurikuler wajib diisi',
-                'extracurricular_code.unique' => 'Kode ekstrakurikuler sudah digunakan',
-                'category_id.required' => 'Kategori ekstrakurikuler wajib dipilih',
-                'category_id.exists' => 'Kategori ekstrakurikuler tidak valid',
-                'user_id.required' => 'Pembina ekstrakurikuler wajib dipilih',
-                'user_id.exists' => 'Pembina tidak valid',
-                'days.required' => 'Minimal pilih 1 hari pelaksanaan',
-                'days.min' => 'Minimal pilih 1 hari pelaksanaan',
+                'extracurricular_code.unique'   => 'Kode ekstrakurikuler sudah digunakan',
+                'category_id.required'          => 'Kategori ekstrakurikuler wajib dipilih',
+                'category_id.exists'            => 'Kategori ekstrakurikuler tidak valid',
+                'user_id.required'              => 'Pembina ekstrakurikuler wajib dipilih',
+                'user_id.exists'                => 'Pembina tidak valid',
+                'days.required'                 => 'Minimal pilih 1 hari pelaksanaan',
+                'days.min'                      => 'Minimal pilih 1 hari pelaksanaan',
             ],
         );
-
-        $extracurricular = Extracurricular::create([
-            'name' => ucwords(strtoupper($validated['extracurricular_name'])),
-            'code' => $validated['extracurricular_code'],
-            'category_id' => $validated['category_id'],
-            'description' => $validated['description'],
-            'award' => $validated['award'],
-            'is_active' => $request->has('status') ? true : false,
-        ]);
-
-        ExtracurricularUser::create([
-            'extracurricular_id' => $extracurricular->id,
-            'user_id' => $validated['user_id'],
-        ]);
-
-        foreach ($validated['days'] as $day) {
-            ExtracurricularSchedule::create([
-                'extracurricular_id' => $extracurricular->id,
-                'day' => $day,
+ 
+        $name = ucwords(strtoupper($validated['extracurricular_name']));
+ 
+        DB::transaction(function () use ($validated, $request, $user, $name) {
+            $extracurricular = Extracurricular::create([
+                'name'        => $name,
+                'code'        => $validated['extracurricular_code'],
+                'category_id' => $validated['category_id'],
+                'description' => $validated['description'] ?? null,
+                'award'       => $validated['award'] ?? null,
+                'is_active'   => $request->has('status'),
             ]);
-        }
-
+ 
+            ExtracurricularUser::create([
+                'extracurricular_id' => $extracurricular->id,
+                'user_id'            => $validated['user_id'],
+            ]);
+ 
+            foreach ($validated['days'] as $day) {
+                ExtracurricularSchedule::create([
+                    'extracurricular_id' => $extracurricular->id,
+                    'day'                => $day,
+                ]);
+            }
+ 
+            Log::create([
+                'user_id'  => $user->id,
+                'activity' => 'Tambah ekstrakurikuler',
+                'detail'   => $user->name . ' menambahkan ekstrakurikuler ' . $name . ' (' . $validated['extracurricular_code'] . ')',
+            ]);
+        });
+ 
         return redirect()
             ->route('extracurricular.index')
-            ->with('success', 'Ekstrakurikuler ' . ucwords(strtoupper($validated['extracurricular_name'])) . ' berhasil ditambahkan!');
+            ->with('success', 'Ekstrakurikuler ' . $name . ' berhasil ditambahkan!');
     }
 
     public function importStore(Request $request)
@@ -210,7 +224,7 @@ class ExtracurricularController extends Controller
         );
 
         try {
-            Excel::import(new ExtracurricularImport(), $request->file('upload'));
+            Excel::import(new ExtracurricularImport(Auth::user()), $request->file('upload'));
 
             return redirect()->route('extracurricular.index')->with('success', 'Data ekstrakurikuler berhasil diimpor!');
         } catch (\Maatwebsite\Excel\Validators\ValidationException $e) {
@@ -242,97 +256,132 @@ class ExtracurricularController extends Controller
 
     public function update(Request $request, Extracurricular $extracurricular)
     {
+        $user = Auth::user();
+ 
         $validated = $request->validate(
             [
                 'extracurricular_name' => 'required|string|max:255',
                 'extracurricular_code' => 'required|string|max:50|unique:extracurriculars,code,' . $extracurricular->id,
-                'category_id' => 'required|exists:extracurricular_categories,id',
-                'user_id' => 'required|exists:users,id',
-                'days' => 'required|array|min:1',
-                'days.*' => 'in:Senin,Selasa,Rabu,Kamis,Jumat,Sabtu,Minggu',
-                'description' => 'nullable|string',
-                'award' => 'nullable|string',
+                'category_id'          => 'required|exists:extracurricular_categories,id',
+                'user_id'              => 'required|exists:users,id',
+                'days'                 => 'required|array|min:1',
+                'days.*'               => 'in:Senin,Selasa,Rabu,Kamis,Jumat,Sabtu,Minggu',
+                'description'          => 'nullable|string',
+                'award'                => 'nullable|string',
             ],
             [
                 'extracurricular_name.required' => 'Nama ekstrakurikuler wajib diisi',
                 'extracurricular_code.required' => 'Kode ekstrakurikuler wajib diisi',
-                'extracurricular_code.unique' => 'Kode ekstrakurikuler sudah digunakan',
-                'category_id.required' => 'Kategori ekstrakurikuler wajib dipilih',
-                'category_id.exists' => 'Kategori ekstrakurikuler tidak valid',
-                'user_id.required' => 'Pembina ekstrakurikuler wajib dipilih',
-                'user_id.exists' => 'Pembina tidak valid',
-                'days.required' => 'Minimal pilih 1 hari pelaksanaan',
-                'days.min' => 'Minimal pilih 1 hari pelaksanaan',
+                'extracurricular_code.unique'   => 'Kode ekstrakurikuler sudah digunakan',
+                'category_id.required'          => 'Kategori ekstrakurikuler wajib dipilih',
+                'category_id.exists'            => 'Kategori ekstrakurikuler tidak valid',
+                'user_id.required'              => 'Pembina ekstrakurikuler wajib dipilih',
+                'user_id.exists'                => 'Pembina tidak valid',
+                'days.required'                 => 'Minimal pilih 1 hari pelaksanaan',
+                'days.min'                      => 'Minimal pilih 1 hari pelaksanaan',
             ],
         );
-
-        // Update ekstrakurikuler
-        $extracurricular->update([
-            'name' => ucwords(strtoupper($validated['extracurricular_name'])),
-            'code' => $validated['extracurricular_code'],
-            'category_id' => $validated['category_id'],
-            'description' => $validated['description'],
-            'award' => $validated['award'],
-        ]);
-
-        // Update pembina (hapus lama, tambah baru)
-        $extracurricular->users()->delete();
-        ExtracurricularUser::create([
-            'extracurricular_id' => $extracurricular->id,
-            'user_id' => $validated['user_id'],
-        ]);
-
-        // Update jadwal (hapus lama, tambah baru)
-        $extracurricular->schedules()->delete();
-        foreach ($validated['days'] as $day) {
-            ExtracurricularSchedule::create([
-                'extracurricular_id' => $extracurricular->id,
-                'day' => $day,
-            ]);
+ 
+        $newName     = ucwords(strtoupper($validated['extracurricular_name']));
+        $oldName     = $extracurricular->name;
+        $oldCode     = $extracurricular->code;
+        $newCode     = $validated['extracurricular_code'];
+        $oldDays     = $extracurricular->schedules->pluck('day')->sort()->values()->toArray();
+        $newDays     = collect($validated['days'])->sort()->values()->toArray();
+        $oldUserId   = $extracurricular->users()->first()?->user_id;
+        $newUserId   = (int) $validated['user_id'];
+ 
+        // Tidak ada perubahan sama sekali
+        if (
+            $oldName   === $newName &&
+            $oldCode   === $newCode &&
+            $oldDays   === $newDays &&
+            $oldUserId === $newUserId &&
+            ($validated['description'] ?? null) === $extracurricular->description &&
+            ($validated['award'] ?? null)       === $extracurricular->award
+        ) {
+            return redirect()
+                ->route('extracurricular.index')
+                ->with('success', 'Ekstrakurikuler ' . $newName . ' berhasil diperbarui!');
         }
-
+ 
+        DB::transaction(function () use ($validated, $extracurricular, $user, $newName, $oldName, $oldCode, $newCode) {
+            $extracurricular->update([
+                'name'        => $newName,
+                'code'        => $newCode,
+                'category_id' => $validated['category_id'],
+                'description' => $validated['description'] ?? null,
+                'award'       => $validated['award'] ?? null,
+            ]);
+ 
+            // Sync pembina
+            $extracurricular->users()->delete();
+            ExtracurricularUser::create([
+                'extracurricular_id' => $extracurricular->id,
+                'user_id'            => $validated['user_id'],
+            ]);
+ 
+            // Sync jadwal
+            $extracurricular->schedules()->delete();
+            foreach ($validated['days'] as $day) {
+                ExtracurricularSchedule::create([
+                    'extracurricular_id' => $extracurricular->id,
+                    'day'                => $day,
+                ]);
+            }
+ 
+            $logDetail = $oldName !== $newName || $oldCode !== $newCode
+                ? $user->name . ' mengubah ekstrakurikuler ' . $oldName . ' (' . $oldCode . ') menjadi ' . $newName . ' (' . $newCode . ')'
+                : $user->name . ' memperbarui data ekstrakurikuler ' . $newName . ' (' . $newCode . ')';
+ 
+            Log::create([
+                'user_id'  => $user->id,
+                'activity' => 'Ubah ekstrakurikuler',
+                'detail'   => $logDetail,
+            ]);
+        });
+ 
         return redirect()
             ->route('extracurricular.index')
-            ->with('success', 'Ekstrakurikuler ' . ucwords(strtoupper($validated['extracurricular_name'])) . ' berhasil diperbarui!');
+            ->with('success', 'Ekstrakurikuler ' . $newName . ' berhasil diperbarui!');
     }
 
     public function destroy(Request $request, Extracurricular $extracurricular)
     {
-        // Validasi password
+        $user = Auth::user();
+ 
         $request->validate(
-            [
-                'password' => 'required',
-            ],
-            [
-                'password.required' => 'Password wajib diisi untuk menghapus ekstrakurikuler.',
-            ],
+            ['password' => 'required'],
+            ['password.required' => 'Password wajib diisi untuk menghapus ekstrakurikuler.'],
         );
-
-        // Cek password
-        if (!Hash::check($request->password, Auth::user()->password)) {
-            return back()->withErrors([
-                'password' => 'Password yang Anda masukkan salah!',
-            ]);
+ 
+        if (!Hash::check($request->password, $user->password)) {
+            return back()->withErrors(['password' => 'Password yang Anda masukkan salah!']);
         }
-
-        // Simpan nama ekstrakurikuler
-        $name = $extracurricular->name;
-
+ 
         $studentCount = $extracurricular->students()->count();
-
+ 
         if ($studentCount > 0) {
             return back()->withErrors([
                 'student' => 'Ekstrakurikuler tidak dapat dihapus karena masih memiliki ' . $studentCount . ' siswa. Hapus atau pindahkan siswa terlebih dahulu.',
             ]);
         }
-
-        // Hapus relasi terkait terlebih dahulu
-        $extracurricular->users()->delete(); // Hapus pembina
-        $extracurricular->schedules()->delete(); // Hapus jadwal
-
-        // Hapus ekstrakurikuler
-        $extracurricular->delete();
-
+ 
+        $name = $extracurricular->name;
+        $code = $extracurricular->code;
+ 
+        DB::transaction(function () use ($user, $extracurricular, $name, $code) {
+            $extracurricular->users()->delete();
+            $extracurricular->schedules()->delete();
+            $extracurricular->delete();
+ 
+            Log::create([
+                'user_id'  => $user->id,
+                'activity' => 'Hapus ekstrakurikuler',
+                'detail'   => $user->name . ' menghapus ekstrakurikuler ' . $name . ' (' . $code . ') (ID: ' . $extracurricular->id . ')',
+            ]);
+        });
+ 
         return redirect()
             ->route('extracurricular.index')
             ->with('success', 'Ekstrakurikuler ' . $name . ' berhasil dihapus!');
@@ -340,19 +389,27 @@ class ExtracurricularController extends Controller
 
     public function toggleActive(Extracurricular $extracurricular, Request $request)
     {
-        // Validasi password
-        if (!Hash::check($request->password, Auth::user()->password)) {
+        $user = Auth::user();
+ 
+        if (!Hash::check($request->password, $user->password)) {
             return redirect()
                 ->route('extracurricular.index')
                 ->withErrors(['error' => 'Password yang anda masukkan salah!']);
         }
-
-        // Toggle status
-        $extracurricular->update([
-            'is_active' => !$extracurricular->is_active,
-        ]);
-
-        $status = $extracurricular->is_active ? 'diaktifkan' : 'dinonaktifkan';
+ 
+        $newStatus = !$extracurricular->is_active;
+        $status    = $newStatus ? 'diaktifkan' : 'dinonaktifkan';
+ 
+        DB::transaction(function () use ($user, $extracurricular, $newStatus, $status) {
+            $extracurricular->update(['is_active' => $newStatus]);
+ 
+            Log::create([
+                'user_id'  => $user->id,
+                'activity' => 'Toggle status ekstrakurikuler',
+                'detail'   => $user->name . ' ' . $status . ' ekstrakurikuler ' . $extracurricular->name,
+            ]);
+        });
+ 
         return redirect()
             ->route('extracurricular.index')
             ->with('success', "Ekstrakurikuler {$extracurricular->name} berhasil {$status}!");
