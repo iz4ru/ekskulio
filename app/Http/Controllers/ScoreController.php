@@ -7,6 +7,7 @@ use App\Exports\ScoreExport;
 use App\Models\AcademicYear;
 use App\Models\Extracurricular;
 use App\Models\ExtracurricularMembership;
+use App\Models\Log;
 use App\Models\ScoreSummary;
 use App\Models\StudentClass;
 use Barryvdh\DomPDF\Facade\Pdf;
