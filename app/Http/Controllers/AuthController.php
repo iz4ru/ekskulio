@@ -114,6 +114,7 @@ class AuthController extends Controller
         if ($status === Password::RESET_LINK_SENT) {
             return redirect()
                 ->route('reset-password.send-link.success')
+                ->with('reset_password_success', true)
                 ->with([
                     'success' => 'Link reset password telah dikirim ke email Anda.',
                     'retry_after' => $throttleMinutes,
@@ -138,6 +139,14 @@ class AuthController extends Controller
 
     public function sendResetPasswordSuccess()
     {
+        if (!session('reset_password_success')) {
+            return redirect()
+                ->route('reset-password.send-link.index')
+                ->withErrors(['error' => 'Halaman ini hanya dapat diakses setelah Anda meminta link reset password.']);
+        }
+
+        session()->forget('reset_password_success');
+
         return view('auth.send-reset-password-success');
     }
 
