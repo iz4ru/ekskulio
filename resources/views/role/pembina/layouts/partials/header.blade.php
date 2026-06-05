@@ -51,13 +51,14 @@
                         </div>
                         <ul class="py-1" role="none">
                             <li>
-                                <form action="{{ route('logout') }}" method="POST"
-                                    class="block cursor-pointer px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                                    role="menuitem">
+                                <form action="{{ route('logout') }}" method="POST">
                                     @csrf
-                                    <button type="submit" class="cursor-pointer"> <i
-                                            class="fa-solid fa-right-from-bracket mr-2 text-gray-700 hover:bg-gray-100 text-md"></i>
-                                        Keluar</button>
+                                    <button type="submit"
+                                        class="w-full text-left block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 cursor-pointer"
+                                        role="menuitem">
+                                        <i class="fa-solid fa-right-from-bracket mr-2 text-gray-700 text-md"></i>
+                                        Keluar
+                                    </button>
                                 </form>
                             </li>
                         </ul>

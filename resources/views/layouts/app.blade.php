@@ -40,19 +40,25 @@
 
     <!-- Password toggle -->
     <script>
-        const passwordInput = document.getElementById("password");
-        const togglePassword = document.getElementById("togglePassword");
-        if (togglePassword) {
-            togglePassword.addEventListener("click", function() {
-                if (passwordInput.type === "password") {
-                    passwordInput.type = "text";
+        function setupPasswordToggle(inputId, toggleId) {
+            const input = document.getElementById(inputId);
+            const toggle = document.getElementById(toggleId);
+
+            if (!input || !toggle) return;
+
+            toggle.addEventListener("click", function() {
+                if (input.type === "password") {
+                    input.type = "text";
                     this.classList.replace("fa-eye", "fa-eye-slash");
                 } else {
-                    passwordInput.type = "password";
+                    input.type = "password";
                     this.classList.replace("fa-eye-slash", "fa-eye");
                 }
             });
         }
+
+        setupPasswordToggle("password", "togglePassword");
+        setupPasswordToggle("password_confirmation", "togglePasswordConfirmation");
     </script>
 
     <!-- Alert animation -->

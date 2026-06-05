@@ -30,6 +30,12 @@ Route::get('/', function () {
 Route::middleware('guest')->group(function () {
     Route::get('login', [AuthController::class, 'index'])->name('login');
     Route::post('login', [AuthController::class, 'login'])->name('login.post');
+
+    Route::get('/reset-password', [AuthController::class, 'sendResetPassword'])->name('reset-password.send-link.index');
+    Route::get('/reset-password/sent', [AuthController::class, 'sendResetPasswordSuccess'])->name('reset-password.send-link.success');
+    Route::post('/reset-password', [AuthController::class, 'sendResetPasswordLink'])->name('reset-password.send-link.post');
+    Route::get('/reset-password/form', [AuthController::class, 'showResetPasswordForm'])->name('password.reset');
+    Route::post('/reset-password/update', [AuthController::class, 'resetPassword'])->name('update.password');
 });
 
 Route::post('logout', [AuthController::class, 'logout'])->name('logout');
