@@ -16,8 +16,8 @@
                             <i class="fa-solid fa-circle-check text-4xl text-green-500"></i>
                         </div>
                         <div class="flex flex-col items-center justify-center gap-2">
-                            <p class="text-gray-700 text-center font-bold text-3xl">Link Terkirim!</p>
-                            <p class="text-gray-500 text-center">Kami telah mengirimkan link reset password ke email Anda. Cek juga folder spam jika pesan masih tidak kunjung muncul.</p>
+                            <p class="text-gray-700 text-center font-bold text-2xl">Link Terkirim!</p>
+                            <p class="text-gray-500 text-center text-sm">Kami telah mengirimkan link reset password ke email Anda. Cek juga folder spam jika pesan masih tidak kunjung muncul.</p>
                         </div>
                     </div>
 
