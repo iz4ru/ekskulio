@@ -123,21 +123,13 @@
                                     {{ $log->activity }}
                                 </td>
                                 <td class="px-4 py-3 border-gray-200">
-                                    <div class="max-w-[240px] sm:max-w-xs lg:max-w-md">
-                                        <p class="text-sm text-gray-700 leading-relaxed line-clamp-2 break-words">
-                                            {{ Str::limit($log->detail, 130) }}
-                                        </p>
-
-                                        @if (strlen($log->detail) > 130)
-                                            <button
-                                                class="detail-btn text-[#0083E9] hover:text-[#0066b3] text-xs font-medium mt-1 flex items-center gap-1 hover:underline cursor-pointer px-2"
-                                                data-detail="{{ addslashes($log->detail) }}"
-                                                data-created="{{ \Carbon\Carbon::parse($log->created_at)->locale('id')->translatedFormat('l, d/m/y, H:i:s') }}">
-                                                Lihat selengkapnya
-                                                <i class="fa-solid fa-arrow-right text-xs"></i>
-                                            </button>
-                                        @endif
-                                    </div>
+                                    <button
+                                        class="detail-btn text-[#0083E9] hover:text-[#0066b3] text-xs font-medium flex items-center gap-1 hover:underline cursor-pointer"
+                                        data-detail="{{ addslashes($log->detail) }}"
+                                        data-created="{{ \Carbon\Carbon::parse($log->created_at)->locale('id')->translatedFormat('l, d/m/y, H:i:s') }}">
+                                        Lihat selengkapnya
+                                        <i class="fa-solid fa-arrow-right text-xs"></i>
+                                    </button>
                                 </td>
                         @endforeach
                     </tbody>
