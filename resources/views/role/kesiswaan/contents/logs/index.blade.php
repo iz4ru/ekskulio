@@ -81,7 +81,7 @@
                                     {{ \Carbon\Carbon::parse($log->created_at)->locale('id')->translatedFormat('l, d/m/y, H:i:s') }}
                                 </td>
                                 <td class="px-4 py-3 font-medium whitespace-nowrap border-gray-200">
-                                    <div class="flex flex-row items-center justify-center gap-2">
+                                    <div class="flex flex-row items-center gap-2">
                                         @if ($log->user->role === 'admin')
                                             <img class="w-6 h-6 rounded-full"
                                                 src="https://ui-avatars.com/api/?name={{ urlencode($log->user->name) }}&background=008236&color=fff"
