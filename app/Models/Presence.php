@@ -17,6 +17,8 @@ class Presence extends Model
         'academic_year_id',
         'date',
         'notes',
+        'coach_photo_path',
+        'activity_photo_path',
     ];
 
     protected $casts = [

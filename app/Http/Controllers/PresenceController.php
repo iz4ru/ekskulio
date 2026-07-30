@@ -2,17 +2,23 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\AcademicYear;
-use App\Models\Extracurricular;
-use App\Models\ExtracurricularMembership;
+use Carbon\Carbon;
 use App\Models\Log;
-use App\Models\Presence;
-use App\Models\PresenceDetail;
 use App\Models\Student;
+use App\Models\Presence;
+use App\Models\AcademicYear;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
+use App\Models\PresenceDetail;
+use Intervention\Image\Format;
+use App\Models\Extracurricular;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Intervention\Image\ImageManager;
+use Illuminate\Support\Facades\Storage;
+use App\Models\ExtracurricularMembership;
+use Intervention\Image\Drivers\Gd\Driver;
 
 class PresenceController extends Controller
 {
@@ -106,6 +112,38 @@ class PresenceController extends Controller
         return view($view, $x);
     }
 
+    private function processImage(
+        UploadedFile $file,
+        string $extracurricularName,
+        string $date,
+        string $type
+    ): string {
+
+        $manager = ImageManager::usingDriver(Driver::class);
+        $image   = $manager->decodePath($file->getRealPath());
+
+        // Resize + crop otomatis ke 1280x720 (16:9, landscape)
+        $image->cover(1280, 720);
+
+        $cleanName = preg_replace('/[^a-zA-Z0-9]+/', '_', $extracurricularName);
+        $cleanDate = Carbon::parse($date)->format('d-m-Y');
+        $filename  = "{$cleanName}_{$cleanDate}_{$type}.jpg";
+
+        // Kompres adaptif sampai ~100kb
+        $quality = 85;
+        $encoded = $image->encodeUsingFormat(Format::JPEG, quality: $quality);
+
+        while (strlen((string) $encoded) > 100 * 1024 && $quality > 10) {
+            $quality -= 5;
+            $encoded  = $image->encodeUsingFormat(Format::JPEG, quality: $quality);
+        }
+
+        $path = 'presences/' . $filename;
+        Storage::disk('public')->put($path, (string) $encoded);
+
+        return $path;
+    }
+    
     public function create(Request $request)
     {
         $user = Auth::user();
@@ -164,13 +202,25 @@ class PresenceController extends Controller
 
         $validated = $request->validate([
             'extracurricular_id' => 'required|exists:extracurriculars,id',
-            'date' => 'required|date',
-            'notes' => 'nullable|string',
-            'attendance' => 'required|array',
-            'attendance.*' => 'required|in:present,sick,permission,absent',
+            'date'               => 'required|date',
+            'notes'              => 'nullable|string',
+            'attendance'         => 'required|array',
+            'attendance.*'       => 'required|in:present,sick,permission,absent',
+            'coach_photo'        => 'nullable|image|mimes:jpeg,jpg,png,gif|max:5120', // max 5MB sebelum dikompres
+            'activity_photo'     => 'nullable|image|mimes:jpeg,jpg,png,gif|max:5120',
+        ],
+        [
+            'coach_photo.image' => 'File foto pembina harus berupa gambar.',
+            'coach_photo.mimes' => 'Format foto pembina harus berupa jpeg, jpg, png, atau gif.',
+            'coach_photo.max'   => 'Ukuran foto pembina maksimal 5MB.',
+            'activity_photo.image' => 'File foto kegiatan harus berupa gambar.',
+            'activity_photo.mimes' => 'Format foto kegiatan harus berupa jpeg, jpg, png, atau gif.',
+            'activity_photo.max'   => 'Ukuran foto kegiatan maksimal 5MB.',
         ]);
 
-        $exists = Presence::where('extracurricular_id', $validated['extracurricular_id'])->whereDate('date', $validated['date'])->exists();
+        $exists = Presence::where('extracurricular_id', $validated['extracurricular_id'])
+            ->whereDate('date', $validated['date'])
+            ->exists();
 
         if ($exists) {
             return back()
@@ -186,35 +236,80 @@ class PresenceController extends Controller
 
         $extracurricular = Extracurricular::findOrFail($validated['extracurricular_id']);
 
-        DB::transaction(function () use ($user, $validated, $activeAY, $extracurricular) {
-            $presence = Presence::create([
-                'extracurricular_id' => $validated['extracurricular_id'],
-                'academic_year_id' => $activeAY->id,
-                'date' => $validated['date'],
-                'notes' => $validated['notes'] ?? null,
-            ]);
+        $coachPhotoPath    = null;
+        $activityPhotoPath = null;
 
-            foreach ($validated['attendance'] as $studentId => $status) {
-                $membership = ExtracurricularMembership::where('student_id', $studentId)->where('extracurricular_id', $validated['extracurricular_id'])->where('academic_year_id', $activeAY->id)->first();
-
-                if ($membership) {
-                    PresenceDetail::create([
-                        'presence_id' => $presence->id,
-                        'membership_id' => $membership->id,
-                        'student_id' => $studentId,
-                        'status' => $status,
-                    ]);
-                }
+        try {
+            if ($request->hasFile('coach_photo')) {
+                $coachPhotoPath = $this->processImage(
+                    $request->file('coach_photo'),
+                    $extracurricular->name,
+                    $validated['date'],
+                    'Coach_Photo'
+                );
             }
 
-            Log::create([
-                'user_id' => $user->id,
-                'activity' => 'Tambah presensi',
-                'detail' => $user->name . ' menambahkan presensi ' . $extracurricular->name . ' tanggal ' . $validated['date'] . ' (' . count($validated['attendance']) . ' siswa)',
-            ]);
-        });
+            if ($request->hasFile('activity_photo')) {
+                $activityPhotoPath = $this->processImage(
+                    $request->file('activity_photo'),
+                    $extracurricular->name,
+                    $validated['date'],
+                    'Activity_Photo'
+                );
+            }
+        } catch (\Throwable $e) {
+            // Kalau gagal kompres/simpan, hapus file yang sudah terlanjur tersimpan
+            if ($coachPhotoPath)    Storage::disk('public')->delete($coachPhotoPath);
+            if ($activityPhotoPath) Storage::disk('public')->delete($activityPhotoPath);
 
-        return redirect()->route('presence.show', $validated['extracurricular_id'])->with('success', 'Presensi berhasil ditambahkan!');
+            return back()
+                ->withErrors(['error' => 'Gagal memproses gambar: ' . $e->getMessage()])
+                ->withInput();
+        }
+
+        try {
+            DB::transaction(function () use ($user, $validated, $activeAY, $extracurricular, $coachPhotoPath, $activityPhotoPath) {
+                $presence = Presence::create([
+                    'extracurricular_id' => $validated['extracurricular_id'],
+                    'academic_year_id'   => $activeAY->id,
+                    'date'               => $validated['date'],
+                    'notes'              => $validated['notes'] ?? null,
+                    'coach_photo_path'   => $coachPhotoPath,
+                    'activity_photo_path'=> $activityPhotoPath,
+                ]);
+
+                foreach ($validated['attendance'] as $studentId => $status) {
+                    $membership = ExtracurricularMembership::where('student_id', $studentId)
+                        ->where('extracurricular_id', $validated['extracurricular_id'])
+                        ->where('academic_year_id', $activeAY->id)
+                        ->first();
+
+                    if ($membership) {
+                        PresenceDetail::create([
+                            'presence_id'   => $presence->id,
+                            'membership_id' => $membership->id,
+                            'student_id'    => $studentId,
+                            'status'        => $status,
+                        ]);
+                    }
+                }
+
+                Log::create([
+                    'user_id'  => $user->id,
+                    'activity' => 'Tambah presensi',
+                    'detail'   => $user->name . ' menambahkan presensi ' . $extracurricular->name . ' tanggal ' . $validated['date'] . ' (' . count($validated['attendance']) . ' siswa)',
+                ]);
+            });
+        } catch (\Throwable $e) {
+            // Rollback file kalau DB transaction gagal
+            if ($coachPhotoPath)    Storage::disk('public')->delete($coachPhotoPath);
+            if ($activityPhotoPath) Storage::disk('public')->delete($activityPhotoPath);
+            throw $e;
+        }
+
+        return redirect()
+            ->route('presence.show', ['extracurricular' => $validated['extracurricular_id']])
+            ->with('success', 'Presensi berhasil ditambahkan!');
     }
 
     public function edit($id)
@@ -249,48 +344,82 @@ class PresenceController extends Controller
 
     public function update(Request $request, $id)
     {
-        $user = Auth::user();
+        $user     = Auth::user();
         $presence = Presence::findOrFail($id);
 
         $validated = $request->validate([
-            'date' => 'required|date',
-            'notes' => 'nullable|string',
-            'attendance' => 'required|array',
-            'attendance.*' => 'required|in:present,sick,permission,absent',
+            'date'           => 'required|date',
+            'notes'          => 'nullable|string',
+            'attendance'     => 'required|array',
+            'attendance.*'   => 'required|in:present,sick,permission,absent',
+            'coach_photo'    => 'nullable|image|mimes:jpeg,jpg,png,gif|max:5120',
+            'activity_photo' => 'nullable|image|mimes:jpeg,jpg,png,gif|max:5120',
+        ], [
+            'coach_photo.image'    => 'File foto pembina harus berupa gambar.',
+            'coach_photo.mimes'    => 'Format foto pembina harus jpeg, jpg, png, atau gif.',
+            'coach_photo.max'      => 'Ukuran foto pembina maksimal 5MB.',
+            'activity_photo.image' => 'File foto kegiatan harus berupa gambar.',
+            'activity_photo.mimes' => 'Format foto kegiatan harus jpeg, jpg, png, atau gif.',
+            'activity_photo.max'   => 'Ukuran foto kegiatan maksimal 5MB.',
         ]);
 
-        $oldDate = $presence->date->toDateString();
+        // Proses foto di luar transaction
+        $coachPhotoPath    = $presence->coach_photo_path;
+        $activityPhotoPath = $presence->activity_photo_path;
+
+        try {
+            // Upload foto baru — otomatis replace existing
+            if ($request->hasFile('coach_photo')) {
+                if ($coachPhotoPath) Storage::disk('public')->delete($coachPhotoPath);
+                $coachPhotoPath = $this->processImage($request->file('coach_photo'), $presence->extracurricular->name, $validated['date'], 'Coach_Photo');
+            } elseif ($request->input('remove_coach_photo') === '1') {
+                // User klik ✕ tanpa upload baru
+                if ($coachPhotoPath) Storage::disk('public')->delete($coachPhotoPath);
+                $coachPhotoPath = null;
+            }
+
+            if ($request->hasFile('activity_photo')) {
+                if ($activityPhotoPath) Storage::disk('public')->delete($activityPhotoPath);
+                $activityPhotoPath = $this->processImage($request->file('activity_photo'), $presence->extracurricular->name, $validated['date'], 'Activity_Photo');
+            } elseif ($request->input('remove_activity_photo') === '1') {
+                if ($activityPhotoPath) Storage::disk('public')->delete($activityPhotoPath);
+                $activityPhotoPath = null;
+            }
+        } catch (\Throwable $e) {
+            return back()->withErrors(['error' => 'Gagal memproses gambar: ' . $e->getMessage()])->withInput();
+        }
+
+        $oldDate  = $presence->date->toDateString();
         $activeAY = $presence->academicYear;
 
-        DB::transaction(function () use ($user, $presence, $validated, $activeAY, $oldDate) {
+        DB::transaction(function () use ($user, $presence, $validated, $activeAY, $oldDate, $coachPhotoPath, $activityPhotoPath) {
             $presence->update([
-                'date' => $validated['date'],
-                'notes' => $validated['notes'] ?? null,
+                'date'               => $validated['date'],
+                'notes'              => $validated['notes'] ?? null,
+                'coach_photo_path'   => $coachPhotoPath,
+                'activity_photo_path'=> $activityPhotoPath,
             ]);
 
             foreach ($validated['attendance'] as $studentId => $status) {
-                $membership = ExtracurricularMembership::where('student_id', $studentId)->where('extracurricular_id', $presence->extracurricular_id)->where('academic_year_id', $activeAY->id)->first();
+                $membership = ExtracurricularMembership::where('student_id', $studentId)
+                    ->where('extracurricular_id', $presence->extracurricular_id)
+                    ->where('academic_year_id', $activeAY->id)
+                    ->first();
 
-                $detailData = [
-                    'presence_id' => $presence->id,
-                    'student_id' => $studentId,
-                    'status' => $status,
-                ];
+                $detailData = ['presence_id' => $presence->id, 'student_id' => $studentId, 'status' => $status];
+                if ($membership) $detailData['membership_id'] = $membership->id;
 
-                if ($membership) {
-                    $detailData['membership_id'] = $membership->id;
-                }
-
-                PresenceDetail::updateOrCreate(['presence_id' => $presence->id, 'student_id' => $studentId], $detailData);
+                PresenceDetail::updateOrCreate(
+                    ['presence_id' => $presence->id, 'student_id' => $studentId],
+                    $detailData
+                );
             }
 
-            $logDetail = $oldDate !== $validated['date'] ? $user->name . ' memperbarui presensi ' . $presence->extracurricular->name . ' dari tanggal ' . $oldDate . ' menjadi ' . $validated['date'] : $user->name . ' memperbarui presensi ' . $presence->extracurricular->name . ' tanggal ' . $validated['date'];
+            $logDetail = $oldDate !== $validated['date']
+                ? $user->name . ' memperbarui presensi ' . $presence->extracurricular->name . ' dari tanggal ' . $oldDate . ' menjadi ' . $validated['date']
+                : $user->name . ' memperbarui presensi ' . $presence->extracurricular->name . ' tanggal ' . $validated['date'];
 
-            Log::create([
-                'user_id' => $user->id,
-                'activity' => 'Ubah presensi',
-                'detail' => $logDetail,
-            ]);
+            Log::create(['user_id' => $user->id, 'activity' => 'Ubah presensi', 'detail' => $logDetail]);
         });
 
         return redirect()->route('presence.show', $presence->extracurricular_id)->with('success', 'Presensi berhasil diperbarui!');

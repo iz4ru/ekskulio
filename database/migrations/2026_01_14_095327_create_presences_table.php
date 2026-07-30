@@ -17,6 +17,8 @@ return new class extends Migration
             $table->foreignId('academic_year_id')->constrained('academic_years')->onDelete('cascade');
             $table->date('date');
             $table->text('notes')->nullable();
+            $table->text('coach_photo_path')->nullable();
+            $table->text('activity_photo_path')->nullable();
             $table->timestamps();
         });
     }

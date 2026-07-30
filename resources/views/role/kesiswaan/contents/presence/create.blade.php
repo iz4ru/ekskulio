@@ -45,7 +45,8 @@
 
         <section>
             <div class="py-8 px-4 mx-auto max-w-5xl lg:py-16">
-                <form action="{{ route('presence.store') }}" method="POST" id="presence-form">
+                <form action="{{ route('presence.store') }}" method="POST" id="presence-form"
+                    enctype="multipart/form-data">
                     @csrf
 
                     <input type="hidden" name="extracurricular_id" value="{{ $extracurricular->id }}">
@@ -110,6 +111,100 @@
                                 class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-md focus:ring-[#0083E9] focus:border-[#0083E9] block w-full p-2.5"
                                 placeholder="Materi: Latihan dasar, Keterangan tambahan, dll...">{{ old('notes') }}</textarea>
                             <p class="mt-1 text-xs text-gray-500">Opsional: Catatan materi atau keterangan pertemuan</p>
+                        </div>
+
+                        {{-- Foto Pembina --}}
+                        <div class="w-full">
+                            <label class="block mb-2 text-sm font-medium text-gray-900">
+                                Foto Pembina
+                                <span class="text-gray-400 text-xs font-normal">(Opsional)</span>
+                            </label>
+                            <div class="relative flex items-center justify-center w-full">
+                                <label for="coach-photo"
+                                    class="relative flex flex-col items-center justify-center w-full h-48 bg-gray-50 border-2 border-dashed border-gray-300 rounded-md cursor-pointer hover:bg-gray-100 transition-colors duration-200 overflow-hidden"
+                                    id="coach-photo-label">
+
+                                    {{-- Placeholder --}}
+                                    <div id="coach-photo-placeholder"
+                                        class="flex flex-col items-center justify-center text-gray-500">
+                                        <svg class="w-8 h-8 mb-3 text-gray-400" aria-hidden="true"
+                                            xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none"
+                                            viewBox="0 0 24 24">
+                                            <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
+                                                stroke-width="2"
+                                                d="M15 17h3a3 3 0 0 0 0-6h-.025a5.56 5.56 0 0 0 .025-.5A5.5 5.5 0 0 0 7.207 9.021C7.137 9.017 7.071 9 7 9a4 4 0 1 0 0 8h2.167M12 19v-9m0 0-2 2m2-2 2 2" />
+                                        </svg>
+                                        <p class="mb-1 text-sm text-gray-600"><span class="font-semibold">Klik untuk
+                                                upload</span> atau drag & drop</p>
+                                        <p class="text-xs text-gray-400">PNG, JPG atau GIF</p>
+                                    </div>
+
+                                    {{-- Preview --}}
+                                    <img id="coach-photo-preview" src="#" alt="Preview Foto Pembina"
+                                        class="hidden absolute inset-0 w-full h-full object-cover rounded-md">
+
+                                    <input id="coach-photo" name="coach_photo" type="file" class="hidden"
+                                        accept="image/*">
+                                </label>
+
+                                {{-- Tombol Hapus --}}
+                                <button type="button" id="coach-photo-clear"
+                                    class="hidden cursor-pointer absolute top-2 right-2 z-10 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors duration-200"
+                                    title="Hapus foto">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none"
+                                        viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
+                            </div>
+                            <p class="mt-1 text-xs text-gray-500">Foto pembina saat pelaksanaan ekstrakurikuler</p>
+                        </div>
+
+                        {{-- Foto Kegiatan --}}
+                        <div class="w-full">
+                            <label class="block mb-2 text-sm font-medium text-gray-900">
+                                Foto Kegiatan
+                                <span class="text-gray-400 text-xs font-normal">(Opsional)</span>
+                            </label>
+                            <div class="relative flex items-center justify-center w-full">
+                                <label for="activity-photo"
+                                    class="relative flex flex-col items-center justify-center w-full h-48 bg-gray-50 border-2 border-dashed border-gray-300 rounded-md cursor-pointer hover:bg-gray-100 transition-colors duration-200 overflow-hidden"
+                                    id="activity-photo-label">
+
+                                    {{-- Placeholder --}}
+                                    <div id="activity-photo-placeholder"
+                                        class="flex flex-col items-center justify-center text-gray-500">
+                                        <svg class="w-8 h-8 mb-3 text-gray-400" aria-hidden="true"
+                                            xmlns="http://www.w3.org/2000/svg" width="24" height="24"
+                                            fill="none" viewBox="0 0 24 24">
+                                            <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
+                                                stroke-width="2"
+                                                d="M15 17h3a3 3 0 0 0 0-6h-.025a5.56 5.56 0 0 0 .025-.5A5.5 5.5 0 0 0 7.207 9.021C7.137 9.017 7.071 9 7 9a4 4 0 1 0 0 8h2.167M12 19v-9m0 0-2 2m2-2 2 2" />
+                                        </svg>
+                                        <p class="mb-1 text-sm text-gray-600"><span class="font-semibold">Klik untuk
+                                                upload</span> atau drag & drop</p>
+                                        <p class="text-xs text-gray-400">PNG, JPG atau GIF</p>
+                                    </div>
+
+                                    {{-- Preview --}}
+                                    <img id="activity-photo-preview" src="#" alt="Preview Foto Kegiatan"
+                                        class="hidden absolute inset-0 w-full h-full object-cover rounded-md">
+
+                                    <input id="activity-photo" name="activity_photo" type="file" class="hidden"
+                                        accept="image/*">
+                                </label>
+
+                                {{-- Tombol Hapus --}}
+                                <button type="button" id="activity-photo-clear"
+                                    class="hidden cursor-pointer absolute top-2 right-2 z-10 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors duration-200"
+                                    title="Hapus foto">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none"
+                                        viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
+                            </div>
+                            <p class="mt-1 text-xs text-gray-500">Foto dokumentasi kegiatan ekstrakurikuler</p>
                         </div>
                     </div>
 
@@ -240,7 +335,7 @@
                                                                         name="attendance[{{ $student->id }}]"
                                                                         value="{{ $status }}"
                                                                         class="w-4 h-4 text-{{ $label[1] }}-600 bg-gray-100 border-gray-300 focus:ring-{{ $label[1] }}-500 focus:ring-2 mr-2"
-                                                                        {{ old("attendance.{$student->id}") == $status ? 'checked' : ($status == 'present' ? 'checked' : '') }}
+                                                                        data-default="{{ old('attendance.' . $student->id, 'present') }}"
                                                                         required>
                                                                     <span
                                                                         class="text-xs font-medium text-{{ $label[1] }}-700">{{ $label[0] }}</span>
@@ -303,6 +398,18 @@
                     });
                 }
 
+                restoreAndBindRadios();
+
+                function restoreAndBindRadios() {
+                    // Restore checked state dari data-default
+                    document.querySelectorAll('input[type="radio"][name^="attendance"]').forEach(radio => {
+                        radio.checked = (radio.value === radio.getAttribute('data-default'));
+                        // Re-attach listener karena DOM sudah diganti DataTable
+                        radio.addEventListener('change', updateStats);
+                    });
+                    updateStats();
+                }
+
                 // ===== AUTO-DETECT HARI =====
                 const dateInput = document.getElementById('date');
                 const dayDisplay = document.getElementById('day-display');
@@ -344,13 +451,87 @@
                     document.getElementById('count-absent').textContent = absent;
                 }
 
-                // Update stats on radio change
-                document.querySelectorAll('input[type="radio"][name^="attendance"]').forEach(radio => {
-                    radio.addEventListener('change', updateStats);
-                });
+                function initImageUpload(inputId, previewId, placeholderId, clearBtnId, labelId) {
+                    const input = document.getElementById(inputId);
+                    const preview = document.getElementById(previewId);
+                    const placeholder = document.getElementById(placeholderId);
+                    const clearBtn = document.getElementById(clearBtnId);
+                    const label = document.getElementById(labelId);
 
-                // Initial update
-                updateStats();
+                    if (!input || !label) return;
+
+                    // ===== SHOW PREVIEW =====
+                    function showPreview(file) {
+                        if (!file || !file.type.startsWith('image/')) return;
+                        const reader = new FileReader();
+                        reader.onload = function(e) {
+                            preview.src = e.target.result;
+                            preview.classList.remove('hidden');
+                            placeholder.classList.add('hidden');
+                            clearBtn.classList.remove('hidden');
+                        };
+                        reader.readAsDataURL(file);
+                    }
+
+                    // ===== INPUT CHANGE (klik upload biasa) =====
+                    input.addEventListener('change', function() {
+                        if (this.files[0]) showPreview(this.files[0]);
+                    });
+
+                    // ===== DRAG OVER — highlight dropzone =====
+                    label.addEventListener('dragover', function(e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        label.classList.add('border-[#0083E9]', 'bg-blue-50');
+                        label.classList.remove('border-gray-300', 'bg-gray-50');
+                    });
+
+                    // ===== DRAG LEAVE — remove highlight =====
+                    label.addEventListener('dragleave', function(e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        label.classList.remove('border-[#0083E9]', 'bg-blue-50');
+                        label.classList.add('border-gray-300', 'bg-gray-50');
+                    });
+
+                    // ===== DROP =====
+                    label.addEventListener('drop', function(e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+
+                        // Reset highlight
+                        label.classList.remove('border-[#0083E9]', 'bg-blue-50');
+                        label.classList.add('border-gray-300', 'bg-gray-50');
+
+                        const file = e.dataTransfer.files[0];
+                        if (!file) return;
+
+                        // Assign ke input supaya ikut ter-submit form
+                        const dt = new DataTransfer();
+                        dt.items.add(file);
+                        input.files = dt.files;
+
+                        showPreview(file);
+                    });
+
+                    // ===== CLEAR =====
+                    clearBtn.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        input.value = '';
+                        preview.src = '#';
+                        preview.classList.add('hidden');
+                        placeholder.classList.remove('hidden');
+                        clearBtn.classList.add('hidden');
+                        label.classList.remove('border-[#0083E9]', 'bg-blue-50');
+                        label.classList.add('border-gray-300', 'bg-gray-50');
+                    });
+                }
+
+                initImageUpload('coach-photo', 'coach-photo-preview', 'coach-photo-placeholder', 'coach-photo-clear',
+                    'coach-photo-label');
+                initImageUpload('activity-photo', 'activity-photo-preview', 'activity-photo-placeholder',
+                    'activity-photo-clear', 'activity-photo-label');
             });
         </script>
     @endpush

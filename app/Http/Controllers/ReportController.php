@@ -57,18 +57,12 @@ class ReportController extends Controller
         $studentClass    = $request->class_id ? StudentClass::findOrFail($request->class_id) : null;
         $month           = (int) $request->month;
 
-        $yearParts = explode('-', $academicYear->year);
-        $startYear = (int) $yearParts[0];
-        $endYear   = isset($yearParts[1]) ? (int) $yearParts[1] : $startYear + 1;
-
-        $queryYear = $month >= 7 ? $startYear : $endYear;
         $monthName = $this->getMonthName($month);
 
         $presences = Presence::with(['details.student.studentClass'])
             ->where('extracurricular_id', $request->extracurricular_id)
             ->where('academic_year_id', $request->academic_year_id)
             ->whereMonth('date', $month)
-            ->whereYear('date', $queryYear)
             ->orderBy('date')
             ->get();
 
